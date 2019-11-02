@@ -34,9 +34,7 @@ def draw_umich_gaussian(heatmap, center, radius, k=1):
     
   left, right = min(x, radius), min(width - x, radius + 1)
   top, bottom = min(y, radius), min(height - y, radius + 1)
-  print(type(radius))
-  print(type(bottom))
-  print(type(right))
+
   masked_heatmap  = heatmap[y - top:y + bottom, x - left:x + right]
   masked_gaussian = gaussian[radius - top:radius + bottom, radius - left:radius + right]
   if min(masked_gaussian.shape) > 0 and min(masked_heatmap.shape) > 0: # TODO debug
@@ -204,7 +202,8 @@ class listDataset(Dataset):
        self.batch_size = batch_size
        self.num_workers = num_workers
        self.num_classes = 20
-       self.max_objs = 50     
+       self.max_objs = 50
+
     def __len__(self):
         return self.nSamples
 
@@ -212,22 +211,22 @@ class listDataset(Dataset):
         assert index <= len(self), 'index range error'
         imgpath = self.lines[index].rstrip()
 
-        if self.train and index % 64== 0:
-            if self.seen < 4000*64:
-               width = 13*32
-               self.shape = (width, width)
-            elif self.seen < 8000*64:
-               width = (random.randint(0,3) + 13)*32
-               self.shape = (width, width)
-            elif self.seen < 12000*64:
-               width = (random.randint(0,5) + 12)*32
-               self.shape = (width, width)
-            elif self.seen < 16000*64:
-               width = (random.randint(0,7) + 11)*32
-               self.shape = (width, width)
-            else: # self.seen < 20000*64:
-               width = (random.randint(0,9) + 10)*32
-               self.shape = (width, width)
+        # if self.train and index % 64== 0:
+        #     if self.seen < 4000*64:
+        #        width = 13*32
+        #        self.shape = (width, width)
+        #     elif self.seen < 8000*64:
+        #        width = (random.randint(0,3) + 13)*32
+        #        self.shape = (width, width)
+        #     elif self.seen < 12000*64:
+        #        width = (random.randint(0,5) + 12)*32
+        #        self.shape = (width, width)
+        #     elif self.seen < 16000*64:
+        #        width = (random.randint(0,7) + 11)*32
+        #        self.shape = (width, width)
+        #     else: # self.seen < 20000*64:
+        #        width = (random.randint(0,9) + 10)*32
+        #        self.shape = (width, width)
 
         if self.train:
             jitter = 0.2
@@ -244,16 +243,15 @@ class listDataset(Dataset):
     
             labpath = imgpath.replace('images', 'labels').replace('JPEGImages', 'labels').replace('.jpg', '.txt').replace('.png','.txt')
             label = torch.zeros(50*5)
-            #if os.path.getsize(labpath):
-            #tmp = torch.from_numpy(np.loadtxt(labpath))
+           
             try:
                 tmp = torch.from_numpy(read_truths_args(labpath, 8.0/img.width).astype('float32'))
             except Exception:
                 tmp = torch.zeros(1,5)
-            #tmp = torch.from_numpy(read_truths(labpath))
+            
             tmp = tmp.view(-1)
             tsz = tmp.numel()
-            #print('labpath = %s , tsz = %d' % (labpath, tsz))
+            
             if tsz > 50*5:
                 label = tmp[0:50*5]
             elif tsz > 0:
@@ -267,28 +265,32 @@ class listDataset(Dataset):
 
         self.seen = self.seen + self.num_workers
         label = label.view(-1,5)
-        
 
-    
         hm = np.zeros((self.num_classes, int(self.shape[0]/4),int(self.shape[1]/4)), dtype=np.float32)
         wh = np.zeros((self.max_objs, 2), dtype=np.float32)
         reg = np.zeros((self.max_objs, 2), dtype=np.float32)
-        ind = np.zeros((self.max_objs), dtype=np.int64)        
+        ind = np.zeros((self.max_objs), dtype=np.int64)
+        reg_mask = np.zeros((self.max_objs), dtype=np.uint8)        
+        output_w = self.shape[1]//4
+        output_h = self.shape[0]//4
         for t in range(50):
             if label[t,1] == 0:
                 break
-            print(label)
+            ct = np.array(
+              [label[t,1]*output_w, label[t,2]*output_h], dtype=np.float32)
+            ct_int = ct.astype(np.int32)
+
             radius = gaussian_radius((math.ceil(label[t,4]), math.ceil(label[t,3])))
-            draw_umich_gaussian(hm[int(label[t,0]),:,:], (math.ceil(label[t,2]*self.shape[0]), math.ceil(label[t,1])*self.shape[1]), math.ceil(radius), k=1)
+            draw_umich_gaussian(hm[int(label[t,0]),:,:], ct_int, math.ceil(radius), k=1)
             wh[t] = 1. * label[t,3], 1. * label[t,4]
-            ind[k] = ct_int[1] * output_w + ct_int[0]
-            reg[k] = ct - ct_int
-            reg_mask[k] = 1
-            cat_spec_wh[k, cls_id * 2: cls_id * 2 + 2] = wh[k]
-            cat_spec_mask[k, cls_id * 2: cls_id * 2 + 2] = 1
+
+            ind[t] = ct_int[1] * output_w + ct_int[0]
+            reg[t] = ct - ct_int
+            reg_mask[t] = 1
+            
         
     
-        ret = {'input': inp, 'hm': hm, 'reg_mask': reg_mask, 'ind': ind, 'wh': wh}
+        ret = {'hm': hm, 'reg_mask': reg_mask, 'ind': ind, 'wh': wh, "reg":reg}
             
 
         return (img, ret)
@@ -318,6 +320,6 @@ if __name__ == '__main__':
     )
     for i,(image,label) in enumerate(train_loader):
         print(image.shape)
-        print(label.shape)
+        print(label.keys())
         
       

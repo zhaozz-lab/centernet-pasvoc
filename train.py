@@ -41,26 +41,43 @@ class AverageMeter(object):
 
 def train(epoch, model, optimizer, criterion, train_loader, config, writer):
     global global_step
+    global_step = 0
     logger.info('Train {}'.format(epoch))
     model.train()
     loss_meter = AverageMeter()
     start = time.time()
-    for step, (images, label_image, presence) in enumerate(train_loader):
+    for step, (image,label) in enumerate(train_loader):
         global_step += 1
-        if config['tensorboard_images'] and step == 0:
-            image = torchvision.utils.make_grid(
-                images, normalize=True, scale_each=True)
-            writer.add_image('Train/Image', image, epoch)
-        images = images.cuda()
-        label_image = label_image.type(torch.LongTensor).cuda()
-        presence = presence.cuda()
+        if config['tensorboard_images'] and epoch == 0 and step == 0:
+            images = torchvision.utils.make_grid(
+                image, normalize=True, scale_each=True)
+            writer.add_image('Test/Image', images, epoch)
+        
+        image = image.cuda()
+        model = model.cuda()
+        
         optimizer.zero_grad()
-        outputs = model(images)
-        loss = criterion(outputs[0], label_image)
+        outputs = model(image)
+
+        # label['hm'] = label['hm'].cuda()
+        # label['wh'] = label['wh'].cuda()
+        # label['ind'] = label['ind'].cuda()
+        # label['reg_mask'] = label['reg_mask'].cuda()
+        # label['reg'] = label['reg'].cuda()
+        # label['hm'] = label['hm'].cuda()
+        # outputs = outputs.detach().cpu().numpy()
+
+        outputs[0]["hm"] = outputs[0]["hm"].detach().cpu()
+        outputs[0]["wh"] = outputs[0]["wh"].detach().cpu()
+        outputs[0]["reg"] = outputs[0]["reg"].detach().cpu()
+        loss,loss_states = criterion(outputs, label)
+        print(type(loss))
+        print(type(loss_states))
+        loss.mean()
         loss.backward()
         optimizer.step()
         num = images.size(0)
-        loss_meter.update(loss.item(), num)
+        # loss_meter.update(loss[0].item(), num)
         
 
         if config['tensorboard']:
@@ -97,22 +114,17 @@ def test(epoch, model, criterion, val_loader, config, writer):
             images = torchvision.utils.make_grid(
                 image, normalize=True, scale_each=True)
             writer.add_image('Test/Image', images, epoch)
-        print(image.shape)  
+        
         image = image.cuda()
-        label = label.cuda()
-
         model = model.cuda()
         with torch.no_grad():
             output = model(image)
 
-        print(output[0]['hm'].shape)
-        print(output[0]['wm'].shape)
-        print(output[0]['reg'].shape)
     
         loss = criterion(output, label)
         
         num = image.size(0)
-        loss_meter.update(loss.item(), num)
+        loss_meter.update(loss[0].item(), num)
         
     elapsed = time.time() - start
     logger.info('Elapsed {:.2f}'.format(elapsed))
@@ -129,9 +141,9 @@ def test(epoch, model, criterion, val_loader, config, writer):
             writer.add_scalar('Test/Loss', loss_meter.avg, epoch)
         writer.add_scalar('Test/Time', elapsed, epoch)
 
-    if config['tensorboard_parameters']:
-        for name, param in model.named_parameters():
-            writer.add_histogram(name, param, global_step)
+    # if config['tensorboard_parameters']:
+    #     for name, param in model.named_parameters():
+    #         writer.add_histogram(name, param, global_step)
 
     return angle_error_meter.avg
 
@@ -147,10 +159,10 @@ def main(opt):
     start_epoch = 0
     print('Setting up data...')
     val_loader = torch.utils.data.DataLoader(
-            listDataset(val_path, shape=(224, 224),shuffle = True, 
+            listDataset(val_path, shape=(224, 224),shuffle = False, 
             transform=transforms.Compose([
             transforms.ToTensor(),
-            ]), train=True,seen = 0,batch_size=1), 
+            ]), train=False,seen = 0,batch_size=1), 
         
         shuffle=False,
         num_workers=1,
@@ -179,7 +191,7 @@ def main(opt):
     logger.info("the val batches is {}".format(num_val_batches))
 
     from models import get_pose_net
-    heads = {"hm":20,"wm":2,"reg":2}
+    heads = {"hm":20,"wh":2,"reg":2}
     model = get_pose_net(34,heads, head_conv=256)
     # print(model)
     model.cuda()
@@ -201,9 +213,9 @@ def main(opt):
     }
 
     # run test before start training
-    test(0, model, criterion, val_loader, config, writer)
+    # test(0, model, criterion, val_loader, config, writer)
 
-    for epoch in range(1, args.epochs + 1):
+    for epoch in range(1, 30):
         scheduler.step()
 
         train(epoch, model, optimizer, criterion, train_loader, config, writer)
@@ -211,7 +223,7 @@ def main(opt):
                            writer)
 
         state = OrderedDict([
-            ('args', vars(args)),
+            # ('args', vars(args)),
             ('state_dict', model.state_dict()),
             ('optimizer', optimizer.state_dict()),
             ('epoch', epoch),

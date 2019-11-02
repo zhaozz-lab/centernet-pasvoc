@@ -12,6 +12,25 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
+def _tranpose_and_gather_feat(feat, ind):
+    feat = feat.permute(0, 2, 3, 1).contiguous()
+    feat = feat.view(feat.size(0), -1, feat.size(3))
+    feat = _gather_feat(feat, ind)
+    return feat
+
+
+def _gather_feat(feat, ind, mask=None):
+    dim  = feat.size(2)
+    ind  = ind.unsqueeze(2).expand(ind.size(0), ind.size(1), dim)
+    feat = feat.gather(1, ind)
+    if mask is not None:
+        mask = mask.unsqueeze(2).expand_as(feat)
+        feat = feat[mask]
+        feat = feat.view(-1, dim)
+    return feat
+
+
 def _sigmoid(x):
   y = torch.clamp(x.sigmoid_(), min=1e-4, max=1-1e-4)
   return y
@@ -251,6 +270,7 @@ class CtdetLoss(torch.nn.Module):
     self.opt = opt
 
   def forward(self, outputs, batch):
+  
     opt = self.opt
     hm_loss, wh_loss, off_loss = 0, 0, 0
     for s in range(opt.num_stacks):
@@ -271,7 +291,7 @@ class CtdetLoss(torch.nn.Module):
           batch['reg'].detach().cpu().numpy(), 
           batch['ind'].detach().cpu().numpy(), 
           output['reg'].shape[3], output['reg'].shape[2])).to(opt.device)
-
+      
       hm_loss += self.crit(output['hm'], batch['hm']) / opt.num_stacks
       if opt.wh_weight > 0:
         if opt.dense_wh:
@@ -285,9 +305,15 @@ class CtdetLoss(torch.nn.Module):
             output['wh'], batch['cat_spec_mask'],
             batch['ind'], batch['cat_spec_wh']) / opt.num_stacks
         else:
-          wh_loss += self.crit_reg(
-            output['wh'], batch['reg_mask'],
-            batch['ind'], batch['wh']) / opt.num_stacks
+            print(output['wh'])
+            print("+++++++++")
+            print(batch['reg_mask'])
+            print(batch['ind'])
+            print("+++++++++")
+            print(batch['wh'])
+            wh_loss += self.crit_reg(
+              output['wh'], batch['reg_mask'],
+              batch['ind'], batch['wh']) / opt.num_stacks
       
       if opt.reg_offset and opt.off_weight > 0:
         off_loss += self.crit_reg(output['reg'], batch['reg_mask'],
@@ -302,5 +328,14 @@ class CtdetLoss(torch.nn.Module):
 
     def labeltoneed(batch):
         x = batch[0]
+
+
+
+if __name__ == '__main__':
+  input = torch.randn(1,50, 2)
+  target = torch.zeros(1,50, 2)
+  mask = torch.randn(1,50, 2)
+  # print(target)
+  print(F.l1_loss(input*mask, target*mask, size_average=False))
 
       
