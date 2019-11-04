@@ -305,12 +305,12 @@ class CtdetLoss(torch.nn.Module):
             output['wh'], batch['cat_spec_mask'],
             batch['ind'], batch['cat_spec_wh']) / opt.num_stacks
         else:
-            print(output['wh'])
-            print("+++++++++")
-            print(batch['reg_mask'])
-            print(batch['ind'])
-            print("+++++++++")
-            print(batch['wh'])
+            # print(output['wh'])
+            # print("+++++++++")
+            # print(batch['reg_mask'])
+            # print(batch['ind'])
+            # print("+++++++++")
+            # print(batch['wh'])
             wh_loss += self.crit_reg(
               output['wh'], batch['reg_mask'],
               batch['ind'], batch['wh']) / opt.num_stacks

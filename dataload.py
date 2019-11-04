@@ -117,7 +117,7 @@ def fill_truth_detection(labpath, w, h, flip, dx, dy, sx, sy):
     max_boxes = 50
     label = np.zeros((max_boxes,5))
     if os.path.getsize(labpath):
-        print(labpath)
+        # print(labpath)
         bs = np.loadtxt(labpath)
         if bs is None:
             return label

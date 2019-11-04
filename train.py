@@ -59,25 +59,22 @@ def train(epoch, model, optimizer, criterion, train_loader, config, writer):
         optimizer.zero_grad()
         outputs = model(image)
 
-        # label['hm'] = label['hm'].cuda()
-        # label['wh'] = label['wh'].cuda()
-        # label['ind'] = label['ind'].cuda()
-        # label['reg_mask'] = label['reg_mask'].cuda()
-        # label['reg'] = label['reg'].cuda()
-        # label['hm'] = label['hm'].cuda()
-        # outputs = outputs.detach().cpu().numpy()
+        label['hm'] = label['hm'].cuda()
+        label['wh'] = label['wh'].cuda()
+        label['ind'] = label['ind'].cuda()
+        label['reg_mask'] = label['reg_mask'].cuda()
+        label['reg'] = label['reg'].cuda()
+        label['hm'] = label['hm'].cuda()
 
-        outputs[0]["hm"] = outputs[0]["hm"].detach().cpu()
-        outputs[0]["wh"] = outputs[0]["wh"].detach().cpu()
-        outputs[0]["reg"] = outputs[0]["reg"].detach().cpu()
+       
         loss,loss_states = criterion(outputs, label)
-        print(type(loss))
-        print(type(loss_states))
+        # print(type(loss))
+        # print(type(loss_states))
         loss.mean()
         loss.backward()
         optimizer.step()
-        num = images.size(0)
-        # loss_meter.update(loss[0].item(), num)
+        num = image.size(0)
+        loss_meter.update(loss.item(), num)
         
 
         if config['tensorboard']:
