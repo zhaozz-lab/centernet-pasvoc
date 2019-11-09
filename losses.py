@@ -162,6 +162,12 @@ class RegL1Loss(nn.Module):
     super(RegL1Loss, self).__init__()
   
   def forward(self, output, mask, ind, target):
+    # the shape of the input
+    # hm 20*56*56
+    # wh 50*2   the width and height of the object
+    # reg 50*2  the regression of the coordinate of the center
+    # ind 50    the index of the scale that has object in feature map
+    # reg_mask 50 that have object is 1,the othrers is 0
     pred = _tranpose_and_gather_feat(output, ind)
     mask = mask.unsqueeze(2).expand_as(pred).float()
     # loss = F.l1_loss(pred * mask, target * mask, reduction='elementwise_mean')

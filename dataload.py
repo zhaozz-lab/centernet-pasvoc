@@ -291,8 +291,6 @@ class listDataset(Dataset):
         
     
         ret = {'hm': hm, 'reg_mask': reg_mask, 'ind': ind, 'wh': wh, "reg":reg}
-            
-
         return (img, ret)
 
 
@@ -305,21 +303,26 @@ class listDataset(Dataset):
 
 
 if __name__ == '__main__':
-    from torchvision import datasets, transforms
-    opt = opts().parse()
-    train_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_train.txt"
-    train_loader = torch.utils.data.DataLoader(
-        listDataset(train_path, shape=(224, 224),shuffle = True, 
-        transform=transforms.Compose([
-        transforms.ToTensor(),
-        ]), train=True,seen = 0,batch_size=1),  
-    batch_size=1, 
-    shuffle=True,
-    num_workers=1,
-    pin_memory=True,  
-    )
-    for i,(image,label) in enumerate(train_loader):
-        print(image.shape)
-        print(label.keys())
+    t = torch.tensor([[[1,2],[3,4],[3,4]]])
+    print(t.shape)
+    zz = torch.gather(t, 1, torch.tensor([[[1,0],[1,1]]]))
+    print(zz)
+
+    # from torchvision import datasets, transforms
+    # opt = opts().parse()
+    # train_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_train.txt"
+    # train_loader = torch.utils.data.DataLoader(
+    #     listDataset(train_path, shape=(224, 224),shuffle = True, 
+    #     transform=transforms.Compose([
+    #     transforms.ToTensor(),
+    #     ]), train=True,seen = 0,batch_size=1),  
+    # batch_size=1, 
+    # shuffle=True,
+    # num_workers=1,
+    # pin_memory=True,  
+    # )
+    # for i,(image,label) in enumerate(train_loader):
+    #     print(image.shape)
+    #     print(label.keys())
         
       

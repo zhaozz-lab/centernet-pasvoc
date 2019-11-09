@@ -68,8 +68,6 @@ def train(epoch, model, optimizer, criterion, train_loader, config, writer):
 
        
         loss,loss_states = criterion(outputs, label)
-        # print(type(loss))
-        # print(type(loss_states))
         loss.mean()
         loss.backward()
         optimizer.step()
@@ -116,6 +114,14 @@ def test(epoch, model, criterion, val_loader, config, writer):
         model = model.cuda()
         with torch.no_grad():
             output = model(image)
+
+
+        label['hm'] = label['hm'].cuda()
+        label['wh'] = label['wh'].cuda()
+        label['ind'] = label['ind'].cuda()
+        label['reg_mask'] = label['reg_mask'].cuda()
+        label['reg'] = label['reg'].cuda()
+        label['hm'] = label['hm'].cuda()
 
     
         loss = criterion(output, label)
@@ -210,7 +216,7 @@ def main(opt):
     }
 
     # run test before start training
-    # test(0, model, criterion, val_loader, config, writer)
+    test(0, model, criterion, val_loader, config, writer)
 
     for epoch in range(1, 30):
         scheduler.step()
