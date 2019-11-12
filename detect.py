@@ -19,7 +19,7 @@ import torch.nn as nn
 # from decode import _nms
 
 num_classes = 80
-max_per_image = 20
+max_per_image = 100
 
 
 coco_class_name = [
@@ -134,7 +134,9 @@ model = get_pose_net(34,heads, head_conv=256)
 def load_model(model, model_path, optimizer=None, resume=False, 
                lr=None, lr_step=None):
   start_epoch = 0
-  checkpoint = torch.load(model_path, map_location=lambda storage, loc: storage)
+  # checkpoint = torch.load(model_path, map_location=lambda storage, loc: storage)
+
+  checkpoint = torch.load(model_path, map_location = torch.device('cpu'))
   print('loaded {}, epoch {}'.format(model_path, checkpoint['epoch']))
   state_dict_ = checkpoint['state_dict']
   state_dict = {}
@@ -193,6 +195,54 @@ model.cuda()
 model.eval()
 
 
+def affine_transform(pt, t):
+    new_pt = np.array([pt[0], pt[1], 1.], dtype=np.float32).T
+    new_pt = np.dot(t, new_pt)
+    return new_pt[:2]
+
+
+def get_affine_transform(center,
+                         scale,
+                         rot,
+                         output_size,
+                         shift=np.array([0, 0], dtype=np.float32),
+                         inv=0):
+    if not isinstance(scale, np.ndarray) and not isinstance(scale, list):
+        scale = np.array([scale, scale], dtype=np.float32)
+
+    scale_tmp = scale
+    src_w = scale_tmp[0]
+    dst_w = output_size[0]
+    dst_h = output_size[1]
+
+    rot_rad = np.pi * rot / 180
+    src_dir = get_dir([0, src_w * -0.5], rot_rad)
+    dst_dir = np.array([0, dst_w * -0.5], np.float32)
+
+    src = np.zeros((3, 2), dtype=np.float32)
+    dst = np.zeros((3, 2), dtype=np.float32)
+    src[0, :] = center + scale_tmp * shift
+    src[1, :] = center + src_dir + scale_tmp * shift
+    dst[0, :] = [dst_w * 0.5, dst_h * 0.5]
+    dst[1, :] = np.array([dst_w * 0.5, dst_h * 0.5], np.float32) + dst_dir
+
+    src[2:, :] = get_3rd_point(src[0, :], src[1, :])
+    dst[2:, :] = get_3rd_point(dst[0, :], dst[1, :])
+
+    if inv:
+        trans = cv2.getAffineTransform(np.float32(dst), np.float32(src))
+    else:
+        trans = cv2.getAffineTransform(np.float32(src), np.float32(dst))
+
+    return trans
+
+
+def transform_preds(coords, center, scale, output_size):
+    target_coords = np.zeros(coords.shape)
+    trans = get_affine_transform(center, scale, 0, output_size, inv=1)
+    for p in range(coords.shape[0]):
+        target_coords[p, 0:2] = affine_transform(coords[p, 0:2], trans)
+    return target_coords
 
 
 
@@ -211,12 +261,16 @@ def _tranpose_and_gather_feat(feat, ind):
     return feat
 
 
-def ctdet_post_process(dets, num_classes):
+def ctdet_post_process(dets, c, s, h, w, num_classes):
   # dets: batch x max_dets x dim
   # return 1-based class det dict
   ret = []
   for i in range(dets.shape[0]):
     top_preds = {}
+    dets[i, :, :2] = transform_preds(
+          dets[i, :, 0:2], c[i], s[i], (w, h))
+    dets[i, :, 2:4] = transform_preds(
+          dets[i, :, 2:4], c[i], s[i], (w, h))
     classes = dets[i, :, -1]
     for j in range(num_classes):
       inds = (classes == j)
@@ -246,20 +300,31 @@ def merge_outputs(detections):
 def pre_process(image,scale, meta=None):
     height, width = image.shape[0:2]
     new_width,new_height = 512,512
-    resized_image = cv2.resize(image, (new_width, new_height))
-    # cv2.imshow("resized iamge",resized_image)
-    # cv2.waitKey(0)
+    
+    
     mean = np.array([[[0.408,0.447,0.47 ]]])
     std = np.array([[[0.289, 0.274,0.278]]])
-    resized_image = ((resized_image / 255. - mean) / std).astype(np.float32)
-    images = resized_image.transpose(2, 0, 1).reshape(1, 3, new_width, new_height)
+
+    c = np.array([width / 2., height / 2.], dtype=np.float32)
+    s = max(width, height) * 1.0
+    trans_input = get_affine_transform(c, s, 0, [new_width, new_height])
+    resized_image = cv2.resize(image, (width, height))
+    inp_image = cv2.warpAffine(
+      resized_image, trans_input, (new_width, new_height),
+      flags=cv2.INTER_LINEAR)
+    cv2.imshow("inp_image",inp_image)
+    cv2.waitKey(100)
+    
+    inp_image = ((inp_image / 255. - mean) / std).astype(np.float32)
+    images = inp_image.transpose(2, 0, 1).reshape(1, 3, new_width, new_height)
     images = images.astype(np.float32)
     images = torch.from_numpy(images)
-    scalewidth = new_width/width
-    scaleheight = new_height/height
-    meta = {}
-    meta["scalewidth"] = scalewidth
-    meta["scaleheight"] = scaleheight
+    # scalewidth = new_width/width
+    # scaleheight = new_height/height
+
+    meta = {'c': c, 's': s,
+            'out_height': new_width // 4,
+            'out_width': new_height // 4}
     
     return images,meta
 
@@ -277,11 +342,12 @@ def process(images, return_time=False):
     return output, dets
 
 
-def post_process(dets,scale=1):
+def post_process(dets,meta,scale=1):
     dets = dets.detach().cpu().numpy()
     dets = dets.reshape(1, -1, dets.shape[2])
     dets = ctdet_post_process(
-        dets.copy(),num_classes)
+        dets.copy(),[meta['c']], [meta['s']],
+        meta['out_height'], meta['out_width'],num_classes)
     for j in range(1, num_classes + 1):
       dets[0][j] = np.array(dets[0][j], dtype=np.float32).reshape(-1, 5)
       dets[0][j][:, :4] /= scale
@@ -349,6 +415,57 @@ def ctdet_decode(heat, wh, reg=None, cat_spec_wh=False, K=100):
     return detections
 
 
+def get_dir(src_point, rot_rad):
+    sn, cs = np.sin(rot_rad), np.cos(rot_rad)
+
+    src_result = [0, 0]
+    src_result[0] = src_point[0] * cs - src_point[1] * sn
+    src_result[1] = src_point[0] * sn + src_point[1] * cs
+
+    return src_result
+
+def get_3rd_point(a, b):
+    direct = a - b
+    return b + np.array([-direct[1], direct[0]], dtype=np.float32)
+
+
+
+def get_affine_transform(center,
+                         scale,
+                         rot,
+                         output_size,
+                         shift=np.array([0, 0], dtype=np.float32),
+                         inv=0):
+    if not isinstance(scale, np.ndarray) and not isinstance(scale, list):
+        scale = np.array([scale, scale], dtype=np.float32)
+
+    scale_tmp = scale
+    src_w = scale_tmp[0]
+    dst_w = output_size[0]
+    dst_h = output_size[1]
+
+    rot_rad = np.pi * rot / 180
+    src_dir = get_dir([0, src_w * -0.5], rot_rad)
+    dst_dir = np.array([0, dst_w * -0.5], np.float32)
+
+    src = np.zeros((3, 2), dtype=np.float32)
+    dst = np.zeros((3, 2), dtype=np.float32)
+    src[0, :] = center + scale_tmp * shift
+    src[1, :] = center + src_dir + scale_tmp * shift
+    dst[0, :] = [dst_w * 0.5, dst_h * 0.5]
+    dst[1, :] = np.array([dst_w * 0.5, dst_h * 0.5], np.float32) + dst_dir
+
+    src[2:, :] = get_3rd_point(src[0, :], src[1, :])
+    dst[2:, :] = get_3rd_point(dst[0, :], dst[1, :])
+
+    if inv:
+        trans = cv2.getAffineTransform(np.float32(dst), np.float32(src))
+    else:
+        trans = cv2.getAffineTransform(np.float32(src), np.float32(dst))
+
+    return trans
+
+
 def add_coco_bbox(imgs, bbox, cat, conf=1, show_txt=True, img_id='default'): 
     bbox = np.array(bbox, dtype=np.int32)
     cat = int(cat)
@@ -372,26 +489,28 @@ def add_coco_bbox(imgs, bbox, cat, conf=1, show_txt=True, img_id='default'):
 
 def detect(image):
     images,meta = pre_process(image,1)
-    # print(images.shape)
+    
     images = images.to("cuda")
     output,dets= process(images,return_time=True)
-    print(output["wh"])
-    dets = post_process(dets)
+    print("the wh is {}".format(output["wh"]))
+    dets = post_process(dets,meta)
     results = merge_outputs(dets)
     images = images.to("cpu")
     for j in range(1, num_classes + 1):
         for bbox in results[j]:
           print("the bbox is {}".format(bbox))
-          if bbox[4] > 0.2:
+          if bbox[4] > 0.3:
               image_detection = add_coco_bbox(image,bbox, bbox[4], conf=1, show_txt=True, img_id='default')
     # image_result = cv2.resize(image_detection,(image.shape[1],image.shape[0]))
+    cv2.imshow("detection",image_detection)
+    cv2.waitKey(0)
     return image_detection
 
 
 if __name__ == '__main__':
     # image = cv2.imread("./54.jpg")
     video = cv2.VideoCapture("t640480_det_results.avi")
-    
+
 
     # Exit if video not opened.
     if not video.isOpened():
@@ -405,6 +524,4 @@ if __name__ == '__main__':
         sys.exit()
     image_result = detect(frame)
     cv2.imshow("test",image_result)
-    cv2.waitKey(0)
-              
-    
+    cv2.waitKey(10)
