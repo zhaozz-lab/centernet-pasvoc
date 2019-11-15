@@ -1,15 +1,8 @@
 #!/usr/bin/python
 # encoding: utf-8
-
-import os
-import random
 import torch
-import numpy as np
 from torch.utils.data import Dataset
-from PIL import Image
-from utils import read_truths_args, read_truths
-from opts import opts
-
+from utils import read_truths_args
 import random
 import os
 from PIL import Image
@@ -25,21 +18,21 @@ def gaussian2D(shape, sigma=1):
     return h
 
 def draw_umich_gaussian(heatmap, center, radius, k=1):
-  diameter = 2 * radius + 1
-  gaussian = gaussian2D((diameter, diameter), sigma=diameter / 6)
-  
-  x, y = int(center[0]), int(center[1])
-
-  height, width = heatmap.shape[0:2]
+    diameter = 2 * radius + 1
+    gaussian = gaussian2D((diameter, diameter), sigma=diameter / 6)
     
-  left, right = min(x, radius), min(width - x, radius + 1)
-  top, bottom = min(y, radius), min(height - y, radius + 1)
+    x, y = int(center[0]), int(center[1])  
 
-  masked_heatmap  = heatmap[y - top:y + bottom, x - left:x + right]
-  masked_gaussian = gaussian[radius - top:radius + bottom, radius - left:radius + right]
-  if min(masked_gaussian.shape) > 0 and min(masked_heatmap.shape) > 0: # TODO debug
-    np.maximum(masked_heatmap, masked_gaussian * k, out=masked_heatmap)
-  return heatmap
+    height, width = heatmap.shape[0:2]
+      
+    left, right = min(x, radius), min(width - x, radius + 1)
+    top, bottom = min(y, radius), min(height - y, radius + 1)  
+
+    masked_heatmap  = heatmap[y - top:y + bottom, x - left:x + right]
+    masked_gaussian = gaussian[radius - top:radius + bottom, radius - left:radius + right]
+    if min(masked_gaussian.shape) > 0 and min(masked_heatmap.shape) > 0: # TODO debug
+        np.maximum(masked_heatmap, masked_gaussian * k, out=masked_heatmap)
+    return heatmap
 
 
 def scale_image_channel(im, c, v):
@@ -210,24 +203,6 @@ class listDataset(Dataset):
     def __getitem__(self, index):
         assert index <= len(self), 'index range error'
         imgpath = self.lines[index].rstrip()
-
-        # if self.train and index % 64== 0:
-        #     if self.seen < 4000*64:
-        #        width = 13*32
-        #        self.shape = (width, width)
-        #     elif self.seen < 8000*64:
-        #        width = (random.randint(0,3) + 13)*32
-        #        self.shape = (width, width)
-        #     elif self.seen < 12000*64:
-        #        width = (random.randint(0,5) + 12)*32
-        #        self.shape = (width, width)
-        #     elif self.seen < 16000*64:
-        #        width = (random.randint(0,7) + 11)*32
-        #        self.shape = (width, width)
-        #     else: # self.seen < 20000*64:
-        #        width = (random.randint(0,9) + 10)*32
-        #        self.shape = (width, width)
-
         if self.train:
             jitter = 0.2
             hue = 0.1
@@ -287,26 +262,24 @@ class listDataset(Dataset):
             ind[t] = ct_int[1] * output_w + ct_int[0]
             reg[t] = ct - ct_int
             reg_mask[t] = 1
-            
-        
-    
         ret = {'hm': hm, 'reg_mask': reg_mask, 'ind': ind, 'wh': wh, "reg":reg}
         return (img, ret)
 
 
 
-
-
-
-
-
-
-
 if __name__ == '__main__':
     t = torch.tensor([[[1,2],[3,4],[3,4]]])
+    print(t)
     print(t.shape)
-    zz = torch.gather(t, 1, torch.tensor([[[1,0],[1,1]]]))
-    print(zz)
+    # t0 = torch.gather(t, 0, torch.tensor([[[1,0],[1,1]]]))
+    # print(t0)
+
+    t1 = torch.gather(t, 1, torch.tensor([[[1,0],[1,1]]]))
+    print(t1)
+
+
+    # t2 = torch.gather(t, 2, torch.tensor([[[1,0],[1,1]]]))
+    # print(t2)
 
     # from torchvision import datasets, transforms
     # opt = opts().parse()

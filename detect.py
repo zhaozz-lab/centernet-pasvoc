@@ -16,8 +16,6 @@ import numpy as np
 import cv2
 import torch.nn as nn
 
-# from decode import _nms
-
 num_classes = 80
 max_per_image = 100
 
@@ -137,7 +135,7 @@ def load_model(model, model_path, optimizer=None, resume=False,
   # checkpoint = torch.load(model_path, map_location=lambda storage, loc: storage)
 
   checkpoint = torch.load(model_path, map_location = torch.device('cpu'))
-  print('loaded {}, epoch {}'.format(model_path, checkpoint['epoch']))
+  # print('loaded {}, epoch {}'.format(model_path, checkpoint['epoch']))
   state_dict_ = checkpoint['state_dict']
   state_dict = {}
   
@@ -299,28 +297,27 @@ def merge_outputs(detections):
 
 def pre_process(image,scale, meta=None):
     height, width = image.shape[0:2]
-    new_width,new_height = 512,512
-    
-    
     mean = np.array([[[0.408,0.447,0.47 ]]])
     std = np.array([[[0.289, 0.274,0.278]]])
 
     c = np.array([width / 2., height / 2.], dtype=np.float32)
     s = max(width, height) * 1.0
+
+    new_width,new_height = 512,512
+
     trans_input = get_affine_transform(c, s, 0, [new_width, new_height])
-    resized_image = cv2.resize(image, (width, height))
+    # resized_image = cv2.resize(image, (width, height))
+    print(trans_input)
     inp_image = cv2.warpAffine(
-      resized_image, trans_input, (new_width, new_height),
+      image, trans_input, (new_width, new_height),
       flags=cv2.INTER_LINEAR)
     cv2.imshow("inp_image",inp_image)
-    cv2.waitKey(100)
+    cv2.waitKey(0)
     
     inp_image = ((inp_image / 255. - mean) / std).astype(np.float32)
     images = inp_image.transpose(2, 0, 1).reshape(1, 3, new_width, new_height)
     images = images.astype(np.float32)
     images = torch.from_numpy(images)
-    # scalewidth = new_width/width
-    # scaleheight = new_height/height
 
     meta = {'c': c, 's': s,
             'out_height': new_width // 4,
@@ -331,7 +328,7 @@ def pre_process(image,scale, meta=None):
 
 def process(images, return_time=False):
     with torch.no_grad():
-        print(images[0][0][0][0])
+        # print(images[0][0][0][0])
         output = model(images)[-1]
         hm = output['hm'].sigmoid_()
         wh = output['wh']
@@ -492,13 +489,13 @@ def detect(image):
     
     images = images.to("cuda")
     output,dets= process(images,return_time=True)
-    print("the wh is {}".format(output["wh"]))
+    # print("the wh is {}".format(output["wh"]))
     dets = post_process(dets,meta)
     results = merge_outputs(dets)
     images = images.to("cpu")
     for j in range(1, num_classes + 1):
         for bbox in results[j]:
-          print("the bbox is {}".format(bbox))
+          # print("the bbox is {}".format(bbox))
           if bbox[4] > 0.3:
               image_detection = add_coco_bbox(image,bbox, bbox[4], conf=1, show_txt=True, img_id='default')
     # image_result = cv2.resize(image_detection,(image.shape[1],image.shape[0]))

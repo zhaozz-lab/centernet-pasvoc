@@ -225,64 +225,63 @@ class opts(object):
                              help='use ground truth depth.')
 
   def parse(self, args=''):
-    print("parser")
-    if args == '':
-      opt = self.parser.parse_args()
-    else:
-      opt = self.parser.parse_args(args)
-    
-    opt.gpus_str = opt.gpus
-    opt.gpus = [int(gpu) for gpu in opt.gpus.split(',')]
-    opt.gpus = [i for i in range(len(opt.gpus))] if opt.gpus[0] >=0 else [-1]
-    opt.lr_step = [int(i) for i in opt.lr_step.split(',')]
-    opt.test_scales = [float(i) for i in opt.test_scales.split(',')]
+      if args == '':
+          opt = self.parser.parse_args()
+      else:
+          opt = self.parser.parse_args(args)
+      
+      opt.gpus_str = opt.gpus
+      opt.gpus = [int(gpu) for gpu in opt.gpus.split(',')]
+      opt.gpus = [i for i in range(len(opt.gpus))] if opt.gpus[0] >=0 else [-1]
+      opt.lr_step = [int(i) for i in opt.lr_step.split(',')]
+      opt.test_scales = [float(i) for i in opt.test_scales.split(',')]  
 
-    opt.fix_res = not opt.keep_res
-    print('Fix size testing.' if opt.fix_res else 'Keep resolution testing.')
-    opt.reg_offset = not opt.not_reg_offset
-    opt.reg_bbox = not opt.not_reg_bbox
-    opt.hm_hp = not opt.not_hm_hp
-    opt.reg_hp_offset = (not opt.not_reg_hp_offset) and opt.hm_hp
+      opt.fix_res = not opt.keep_res
+      print('Fix size testing.' if opt.fix_res else 'Keep resolution testing.')
+      opt.reg_offset = not opt.not_reg_offset
+      opt.reg_bbox = not opt.not_reg_bbox
+      opt.hm_hp = not opt.not_hm_hp
+      opt.reg_hp_offset = (not opt.not_reg_hp_offset) and opt.hm_hp  
 
-    if opt.head_conv == -1: # init default head_conv
-      opt.head_conv = 256 if 'dla' in opt.arch else 64
-    opt.pad = 127 if 'hourglass' in opt.arch else 31
-    opt.num_stacks = 2 if opt.arch == 'hourglass' else 1
+      if opt.head_conv == -1: # init default head_conv
+          opt.head_conv = 256 if 'dla' in opt.arch else 64
+      opt.pad = 127 if 'hourglass' in opt.arch else 31
+      opt.num_stacks = 2 if opt.arch == 'hourglass' else 1  
 
-    if opt.trainval:
-      opt.val_intervals = 100000000
+      if opt.trainval:
+          opt.val_intervals = 100000000  
 
-    if opt.debug > 0:
-      opt.num_workers = 0
-      opt.batch_size = 1
-      opt.gpus = [opt.gpus[0]]
-      opt.master_batch_size = -1
+      if opt.debug > 0:
+          opt.num_workers = 0
+          opt.batch_size = 1
+          opt.gpus = [opt.gpus[0]]
+          opt.master_batch_size = -1  
 
-    if opt.master_batch_size == -1:
-      opt.master_batch_size = opt.batch_size // len(opt.gpus)
-    rest_batch_size = (opt.batch_size - opt.master_batch_size)
-    opt.chunk_sizes = [opt.master_batch_size]
-    for i in range(len(opt.gpus) - 1):
-      slave_chunk_size = rest_batch_size // (len(opt.gpus) - 1)
-      if i < rest_batch_size % (len(opt.gpus) - 1):
-        slave_chunk_size += 1
-      opt.chunk_sizes.append(slave_chunk_size)
-    print('training chunk_sizes:', opt.chunk_sizes)
+      if opt.master_batch_size == -1:
+          opt.master_batch_size = opt.batch_size // len(opt.gpus)
+      # rest_batch_size = (opt.batch_size - opt.master_batch_size)
+      # opt.chunk_sizes = [opt.master_batch_size]
+      # for i in range(len(opt.gpus) - 1):
+      #     slave_chunk_size = rest_batch_size // (len(opt.gpus) - 1)
+      #     if i < rest_batch_size % (len(opt.gpus) - 1):
+      #         slave_chunk_size += 1
+      #     opt.chunk_sizes.append(slave_chunk_size)
+      # print('training chunk_sizes:', opt.chunk_sizes)  
 
-    opt.root_dir = os.path.join(os.path.dirname(__file__), '..', '..')
-    opt.data_dir = os.path.join(opt.root_dir, 'data')
-    opt.exp_dir = os.path.join(opt.root_dir, 'exp', opt.task)
-    opt.save_dir = os.path.join(opt.exp_dir, opt.exp_id)
-    opt.debug_dir = os.path.join(opt.save_dir, 'debug')
-    print('The output will be saved to ', opt.save_dir)
-    
-    if opt.resume and opt.load_model == '':
-      model_path = opt.save_dir[:-4] if opt.save_dir.endswith('TEST') \
-                  else opt.save_dir
-      opt.load_model = os.path.join(model_path, 'model_last.pth')
-    return opt
+      # opt.root_dir = os.path.join(os.path.dirname(__file__), '..', '..')
+      # opt.data_dir = os.path.join(opt.root_dir, 'data')
+      # opt.exp_dir = os.path.join(opt.root_dir, 'exp', opt.task)
+      # opt.save_dir = os.path.join(opt.exp_dir, opt.exp_id)
+      # opt.debug_dir = os.path.join(opt.save_dir, 'debug')
+      # print('The output will be saved to ', opt.save_dir)
+      
+      if opt.resume and opt.load_model == '':
+          model_path = opt.save_dir[:-4] if opt.save_dir.endswith('TEST') \
+                    else opt.save_dir
+          opt.load_model = os.path.join(model_path, 'model_last.pth')
+      return opt
 
-  def update_dataset_info_and_set_heads(self, opt, dataset):
+def update_dataset_info_and_set_heads(self, opt, dataset):
     input_h, input_w = dataset.default_resolution
     opt.mean, opt.std = dataset.mean, dataset.std
     opt.num_classes = dataset.num_classes
@@ -299,42 +298,42 @@ class opts(object):
     
     if opt.task == 'exdet':
       # assert opt.dataset in ['coco']
-      num_hm = 1 if opt.agnostic_ex else opt.num_classes
-      opt.heads = {'hm_t': num_hm, 'hm_l': num_hm, 
-                   'hm_b': num_hm, 'hm_r': num_hm,
-                   'hm_c': opt.num_classes}
-      if opt.reg_offset:
-        opt.heads.update({'reg_t': 2, 'reg_l': 2, 'reg_b': 2, 'reg_r': 2})
+        num_hm = 1 if opt.agnostic_ex else opt.num_classes
+        opt.heads = {'hm_t': num_hm, 'hm_l': num_hm, 
+                     'hm_b': num_hm, 'hm_r': num_hm,
+                     'hm_c': opt.num_classes}
+        if opt.reg_offset:
+            opt.heads.update({'reg_t': 2, 'reg_l': 2, 'reg_b': 2, 'reg_r': 2})
     elif opt.task == 'ddd':
       # assert opt.dataset in ['gta', 'kitti', 'viper']
-      opt.heads = {'hm': opt.num_classes, 'dep': 1, 'rot': 8, 'dim': 3}
-      if opt.reg_bbox:
-        opt.heads.update(
-          {'wh': 2})
-      if opt.reg_offset:
-        opt.heads.update({'reg': 2})
-    elif opt.task == 'ctdet':
+        opt.heads = {'hm': opt.num_classes, 'dep': 1, 'rot': 8, 'dim': 3}
+        if opt.reg_bbox:
+            opt.heads.update(
+              {'wh': 2})
+        if opt.reg_offset:
+            opt.heads.update({'reg': 2})
+        elif opt.task == 'ctdet':
       # assert opt.dataset in ['pascal', 'coco']
-      opt.heads = {'hm': opt.num_classes,
+            opt.heads = {'hm': opt.num_classes,
                    'wh': 2 if not opt.cat_spec_wh else 2 * opt.num_classes}
-      if opt.reg_offset:
-        opt.heads.update({'reg': 2})
+        if opt.reg_offset:
+            opt.heads.update({'reg': 2})
     elif opt.task == 'multi_pose':
       # assert opt.dataset in ['coco_hp']
-      opt.flip_idx = dataset.flip_idx
-      opt.heads = {'hm': opt.num_classes, 'wh': 2, 'hps': 34}
-      if opt.reg_offset:
-        opt.heads.update({'reg': 2})
-      if opt.hm_hp:
-        opt.heads.update({'hm_hp': 17})
-      if opt.reg_hp_offset:
-        opt.heads.update({'hp_offset': 2})
+        opt.flip_idx = dataset.flip_idx
+        opt.heads = {'hm': opt.num_classes, 'wh': 2, 'hps': 34}
+        if opt.reg_offset:
+            opt.heads.update({'reg': 2})
+        if opt.hm_hp:
+            opt.heads.update({'hm_hp': 17})
+        if opt.reg_hp_offset:
+            opt.heads.update({'hp_offset': 2})
     else:
-      assert 0, 'task not defined!'
+        assert 0, 'task not defined!'
     print('heads', opt.heads)
     return opt
 
-  def init(self, args=''):
+def init(self, args=''):
     default_dataset_info = {
       'ctdet': {'default_resolution': [512, 512], 'num_classes': 80, 
                 'mean': [0.408, 0.447, 0.470], 'std': [0.289, 0.274, 0.278],
@@ -352,16 +351,7 @@ class opts(object):
                 'mean': [0.485, 0.456, 0.406], 'std': [0.229, 0.224, 0.225],
                 'dataset': 'kitti'},
     }
-    # class Struct:
-    #   def __init__(self, entries):
-    #     for k, v in entries.items():
-    #       self.__setattr__(k, v)
-    # opt = self.parse(args)
-    # dataset = Struct(default_dataset_info[opt.task])
-    # opt.dataset = dataset.dataset
-    # opt = self.update_dataset_info_and_set_heads(opt, dataset)
-    # return opt
-
+  
 
 if __name__ == '__main__':
     opt = opts().parse()

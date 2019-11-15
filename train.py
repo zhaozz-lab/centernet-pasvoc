@@ -13,6 +13,7 @@ import torchvision
 from torchvision import datasets, transforms
 
 from losses import CtdetLoss
+from collections import OrderedDict
 
 logging.basicConfig(
     format='[%(asctime)s %(name)s %(levelname)s] - %(message)s',
@@ -160,7 +161,7 @@ def main(opt):
     val_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_val.txt"
     # optimizer = torch.optim.Adam(model.parameters(), opt.lr)
     start_epoch = 0
-    print('Setting up data...')
+    # print('Setting up data...')
     val_loader = torch.utils.data.DataLoader(
             listDataset(val_path, shape=(224, 224),shuffle = False, 
             transform=transforms.Compose([
@@ -196,7 +197,6 @@ def main(opt):
     from models import get_pose_net
     heads = {"hm":20,"wh":2,"reg":2}
     model = get_pose_net(34,heads, head_conv=256)
-    # print(model)
     model.cuda()
 
     criterion = CtdetLoss(opt)
@@ -232,6 +232,7 @@ def main(opt):
             ('epoch', epoch),
             ('angle_error', angle_error),
         ])
+        outdir = "./"
         model_path = os.path.join(outdir, 'model_state.pth')
         torch.save(state, model_path)
 
