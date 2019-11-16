@@ -134,7 +134,7 @@ def test_eval():
 
 if __name__ == '__main__':
     #test_eval()
-    from predict import *
+    # from predict import *
     from collections import defaultdict
     from tqdm import tqdm
 
@@ -167,17 +167,7 @@ if __name__ == '__main__':
     #start test
     #
     print('---start test---')
-    # model = vgg16_bn(pretrained=False)
     model = resnet50()
-    # model.classifier = nn.Sequential(
-    #             nn.Linear(512 * 7 * 7, 4096),
-    #             nn.ReLU(True),
-    #             nn.Dropout(),
-    #             #nn.Linear(4096, 4096),
-    #             #nn.ReLU(True),
-    #             #nn.Dropout(),
-    #             nn.Linear(4096, 1470),
-    #         )
     model.load_state_dict(torch.load('best.pth'))
     model.eval()
     model.cuda()
@@ -186,21 +176,6 @@ if __name__ == '__main__':
         result = predict_gpu(model,image_path,root_path='/home/xzh/data/VOCdevkit/VOC2012/allimgs/') #result[[left_up,right_bottom,class_name,image_path],]
         for (x1,y1),(x2,y2),class_name,image_id,prob in result: #image_id is actually image_path
             preds[class_name].append([image_id,prob,x1,y1,x2,y2])
-        # print(image_path)
-        # image = cv2.imread('/home/xzh/data/VOCdevkit/VOC2012/allimgs/'+image_path)
-        # for left_up,right_bottom,class_name,_,prob in result:
-        #     color = Color[VOC_CLASSES.index(class_name)]
-        #     cv2.rectangle(image,left_up,right_bottom,color,2)
-        #     label = class_name+str(round(prob,2))
-        #     text_size, baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)
-        #     p1 = (left_up[0], left_up[1]- text_size[1])
-        #     cv2.rectangle(image, (p1[0] - 2//2, p1[1] - 2 - baseline), (p1[0] + text_size[0], p1[1] + text_size[1]), color, -1)
-        #     cv2.putText(image, label, (p1[0], p1[1] + baseline), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,255), 1, 8)
-
-        # cv2.imwrite('testimg/'+image_path,image)
-        # count += 1
-        # if count == 100:
-        #     break
     
     print('---start evaluate---')
     voc_eval(preds,target,VOC_CLASSES=VOC_CLASSES)

@@ -157,32 +157,32 @@ def test(epoch, model, criterion, val_loader, config, writer):
 def main(opt):
     torch.manual_seed(opt.seed)
     torch.backends.cudnn.benchmark = not opt.not_cuda_benchmark and not opt.test
-    train_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_train.txt"
-    val_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_val.txt"
+    train_path = "../VOC/train.txt"
+    val_path = "../VOC/val.txt"
+    # train_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_train.txt"
+    # val_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_val.txt"
     # optimizer = torch.optim.Adam(model.parameters(), opt.lr)
     start_epoch = 0
     # print('Setting up data...')
+    batchsize = 32 
+    imageshape=(384,384)
     val_loader = torch.utils.data.DataLoader(
-            listDataset(val_path, shape=(224, 224),shuffle = False, 
-            transform=transforms.Compose([
-            transforms.ToTensor(),
-            ]), train=False,seen = 0,batch_size=1), 
+            listDataset(val_path, shape=imageshape,shuffle = False, 
+            train=False,seen = 0,batch_size=batchsize), 
         
         shuffle=False,
-        num_workers=1,
+        num_workers=8,
         pin_memory=True,
-        batch_size=1, 
+        batch_size=batchsize, 
     ) 
 
 
     train_loader = torch.utils.data.DataLoader(
-            listDataset(train_path, shape=(224, 224),shuffle = True, 
-            transform=transforms.Compose([
-            transforms.ToTensor(),
-            ]), train=True,seen = 0,batch_size=1),  
-        batch_size=1, 
+            listDataset(train_path, shape=imageshape,shuffle = True, 
+            train=True,seen = 0,batch_size=batchsize),  
+        batch_size=batchsize, 
         shuffle=True,
-        num_workers=1,
+        num_workers=8,
         pin_memory=True,  
     )  
     print("the train_loader size is {}".format(len(train_loader)))
@@ -196,7 +196,7 @@ def main(opt):
 
     from models import get_pose_net
     heads = {"hm":20,"wh":2,"reg":2}
-    model = get_pose_net(34,heads, head_conv=256)
+    model = get_pose_net(18,heads, head_conv=256)
     model.cuda()
 
     criterion = CtdetLoss(opt)
@@ -207,7 +207,7 @@ def main(opt):
         weight_decay=1e-4
         )
     scheduler = torch.optim.lr_scheduler.MultiStepLR(
-        optimizer, milestones='[20, 30]', gamma=0.1)
+        optimizer, milestones=[10, 20], gamma=0.1)
 
     config = {
         'tensorboard': True,

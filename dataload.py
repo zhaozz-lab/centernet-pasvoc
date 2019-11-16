@@ -8,7 +8,7 @@ import os
 from PIL import Image
 import numpy as np
 import math
-
+Debug = False
 def gaussian2D(shape, sigma=1):
     m, n = [(ss - 1.) / 2. for ss in shape]
     y, x = np.ogrid[-m:m+1,-n:n+1]
@@ -112,11 +112,13 @@ def fill_truth_detection(labpath, w, h, flip, dx, dy, sx, sy):
     if os.path.getsize(labpath):
         # print(labpath)
         bs = np.loadtxt(labpath)
+
         if bs is None:
             return label
         bs = np.reshape(bs, (-1, 5))
 
         cc = 0
+       # print("the bs is {}".format(bs))
         for i in range(bs.shape[0]):
             x1 = bs[i][1] - bs[i][3]/2
             y1 = bs[i][2] - bs[i][4]/2
@@ -150,6 +152,7 @@ def load_data_detection(imgpath, shape, jitter, hue, saturation, exposure):
     labpath = imgpath.replace('images', 'labels').replace('JPEGImages', 'labels').replace('.jpg', '.txt').replace('.png','.txt')
     
     ## data augmentation
+    # img = cv2.imread(imgpath)
     img = Image.open(imgpath).convert('RGB')
     img,flip,dx,dy,sx,sy = data_augmentation(img, shape, jitter, hue, saturation, exposure)
     label = fill_truth_detection(labpath, img.width, img.height, flip, dx, dy, 1./sx, 1./sy)
@@ -211,6 +214,8 @@ class listDataset(Dataset):
             
             img, label = load_data_detection(imgpath, self.shape, jitter, hue, saturation, exposure)
             label = torch.from_numpy(label)
+            # img.show()
+
         else:
             img = Image.open(imgpath).convert('RGB')
             if self.shape:
@@ -218,12 +223,13 @@ class listDataset(Dataset):
     
             labpath = imgpath.replace('images', 'labels').replace('JPEGImages', 'labels').replace('.jpg', '.txt').replace('.png','.txt')
             label = torch.zeros(50*5)
-           
+            print(labpath)
             try:
                 tmp = torch.from_numpy(read_truths_args(labpath, 8.0/img.width).astype('float32'))
-            except Exception:
+            except Exception as e:
+                print(e)
                 tmp = torch.zeros(1,5)
-            
+            print(tmp)
             tmp = tmp.view(-1)
             tsz = tmp.numel()
             
@@ -232,15 +238,16 @@ class listDataset(Dataset):
             elif tsz > 0:
                 label[0:tsz] = tmp
 
-        if self.transform is not None:
-            img = self.transform(img)
-
-        if self.target_transform is not None:
-            label = self.target_transform(label)
-
-        self.seen = self.seen + self.num_workers
+        mean = np.array([[[0.408,0.447,0.47 ]]])
+        std = np.array([[[0.289, 0.274,0.278]]])
+        img = np.array(img)
+        img = ((img / 255. - mean) / std).astype(np.float32)
+        img = img.transpose(2, 0, 1)
+        img = img.astype(np.float32)
+        # img = torch.from_numpy(img)
+        # print("the shape is {}".format(img.shape))
         label = label.view(-1,5)
-
+       # print(label)
         hm = np.zeros((self.num_classes, int(self.shape[0]/4),int(self.shape[1]/4)), dtype=np.float32)
         wh = np.zeros((self.max_objs, 2), dtype=np.float32)
         reg = np.zeros((self.max_objs, 2), dtype=np.float32)
@@ -255,47 +262,57 @@ class listDataset(Dataset):
               [label[t,1]*output_w, label[t,2]*output_h], dtype=np.float32)
             ct_int = ct.astype(np.int32)
 
-            radius = gaussian_radius((math.ceil(label[t,4]), math.ceil(label[t,3])))
+            radius = gaussian_radius((math.ceil(label[t,4]*output_w*4), math.ceil(label[t,3]*output_w*4)))
             draw_umich_gaussian(hm[int(label[t,0]),:,:], ct_int, math.ceil(radius), k=1)
-            wh[t] = 1. * label[t,3], 1. * label[t,4]
+            wh[t] = 1. * label[t,3]*output_w*4, 1. * label[t,4]*output_h*4
 
             ind[t] = ct_int[1] * output_w + ct_int[0]
             reg[t] = ct - ct_int
             reg_mask[t] = 1
         ret = {'hm': hm, 'reg_mask': reg_mask, 'ind': ind, 'wh': wh, "reg":reg}
+        if Debug:
+            test_img = img
+            # print(type(test_img))
+            import cv2
+            # print(test_img.shape)
+            test_img = test_img.transpose(1, 2, 0)
+            test_img = (test_img * std + mean)
+            cv2.rectangle(test_img,(label[0,1]*384-label[0,3]*384/2,label[0,2]*384-label[0,4]*384/2),(label[0,1]*384+label[0,3]*384/2,label[0,2]*384+label[0,4]*384/2),(255, 0, 0), 2)
+            cv2.imshow("tests",test_img)
+            print(label)
+            cv2.waitKey(0)
         return (img, ret)
 
 
 
 if __name__ == '__main__':
-    t = torch.tensor([[[1,2],[3,4],[3,4]]])
-    print(t)
-    print(t.shape)
-    # t0 = torch.gather(t, 0, torch.tensor([[[1,0],[1,1]]]))
-    # print(t0)
+    # t = torch.tensor([[[1,2],[3,4],[3,4]]])
+    # print(t)
+    # print(t.shape)
+    # # t0 = torch.gather(t, 0, torch.tensor([[[1,0],[1,1]]]))
+    # # print(t0)
 
-    t1 = torch.gather(t, 1, torch.tensor([[[1,0],[1,1]]]))
-    print(t1)
+    # t1 = torch.gather(t, 1, torch.tensor([[[1,0],[1,1]]]))
+    # print(t1)
 
 
     # t2 = torch.gather(t, 2, torch.tensor([[[1,0],[1,1]]]))
     # print(t2)
 
-    # from torchvision import datasets, transforms
+    from torchvision import datasets, transforms
+    import cv2
     # opt = opts().parse()
-    # train_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_train.txt"
-    # train_loader = torch.utils.data.DataLoader(
-    #     listDataset(train_path, shape=(224, 224),shuffle = True, 
-    #     transform=transforms.Compose([
-    #     transforms.ToTensor(),
-    #     ]), train=True,seen = 0,batch_size=1),  
-    # batch_size=1, 
-    # shuffle=True,
-    # num_workers=1,
-    # pin_memory=True,  
-    # )
-    # for i,(image,label) in enumerate(train_loader):
-    #     print(image.shape)
-    #     print(label.keys())
+    train_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_train.txt"
+    train_loader = torch.utils.data.DataLoader(
+        listDataset(train_path, shape=(384, 384),shuffle = True, 
+         train=False,seen = 0,batch_size=1),  
+    batch_size=1, 
+    shuffle=True,
+    num_workers=1,
+    pin_memory=True,  
+    )
+    for i,(image,label) in enumerate(train_loader):
+        print(image.shape)
+        # print(label.keys())
         
       

@@ -225,7 +225,7 @@ class PoseResNet(nn.Module):
             ret[head] = self.__getattr__(head)(x)
         return [ret]
 
-    def init_weights(self, num_layers, pretrained=True):
+    def init_weights(self, num_layers, pretrained=False):
         if pretrained:
             # print('=> init resnet deconv weights from normal distribution')
             for _, m in self.deconv_layers.named_modules():
@@ -276,7 +276,7 @@ def get_pose_net(num_layers, heads, head_conv = 256):
   block_class, layers = resnet_spec[num_layers]
 
   model = PoseResNet(block_class, layers, heads, head_conv=head_conv)
-  model.init_weights(num_layers, pretrained=True)
+  # model.init_weights(num_layers, pretrained=False)
   return model
 
 

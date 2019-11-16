@@ -277,13 +277,16 @@ def read_truths(lab_path):
         return np.array([])
     if os.path.getsize(lab_path):
         truths = np.loadtxt(lab_path)
-        truths = truths.reshape(truths.size/5, 5) # to avoid single truth problem
+
+        truths = truths.reshape(int(truths.size/5), 5) # to avoid single truth problem
+        
         return truths
     else:
         return np.array([])
 
 def read_truths_args(lab_path, min_box_scale):
     truths = read_truths(lab_path)
+    # print("the truths is {}".format(truths))
     new_truths = []
     for i in range(truths.shape[0]):
         if truths[i][3] < min_box_scale:
