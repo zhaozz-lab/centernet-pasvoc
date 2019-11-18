@@ -207,7 +207,7 @@ def main(opt):
         weight_decay=1e-4
         )
     scheduler = torch.optim.lr_scheduler.MultiStepLR(
-        optimizer, milestones=[10, 20], gamma=0.1)
+        optimizer, milestones=opt.lr_step, gamma=0.1)
 
     config = {
         'tensorboard': True,
@@ -218,7 +218,7 @@ def main(opt):
     # run test before start training
     test(0, model, criterion, val_loader, config, writer)
 
-    for epoch in range(1, 30):
+    for epoch in range(1, 100):
         scheduler.step()
 
         train(epoch, model, optimizer, criterion, train_loader, config, writer)
@@ -233,12 +233,12 @@ def main(opt):
             ('angle_error', angle_error),
         ])
         outdir = "./"
-        model_path = os.path.join(outdir, 'model_state.pth')
+        model_path = os.path.join(outdir, 'model_state1.pth')
         torch.save(state, model_path)
 
-    if args.tensorboard:
-        outpath = os.path.join(outdir, 'all_scalars.json')
-        writer.export_scalars_to_json(outpath)
+   # if args.tensorboard:
+   #     outpath = os.path.join(outdir, 'all_scalars.json')
+   #     writer.export_scalars_to_json(outpath)
 
       
 if __name__ == '__main__':

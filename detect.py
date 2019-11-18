@@ -312,7 +312,7 @@ def pre_process(image,scale, meta=None):
       image, trans_input, (new_width, new_height),
       flags=cv2.INTER_LINEAR)
     cv2.imshow("inp_image",inp_image)
-    cv2.waitKey(0)
+    cv2.waitKey(10)
     
     inp_image = ((inp_image / 255. - mean) / std).astype(np.float32)
     images = inp_image.transpose(2, 0, 1).reshape(1, 3, new_width, new_height)
@@ -332,9 +332,9 @@ def process(images, return_time=False):
         output = model(images)[-1]
         hm = output['hm'].sigmoid_()
         wh = output['wh']
-        # print("the wh is {}".format(wh))
+        print("the wh is {}".format(wh))
         reg = output['reg']
-        # print("the reg is {}".format(reg))
+        print("the reg is {}".format(reg))
         torch.cuda.synchronize()
         dets = ctdet_decode(hm, wh, reg=reg, cat_spec_wh=False, K=100)
 

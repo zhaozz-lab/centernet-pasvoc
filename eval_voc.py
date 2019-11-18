@@ -132,6 +132,7 @@ def test_eval():
     target = {('image01','cat'):[[20,20,41,41]],('image01','dog'):[[60,60,91,91]],('image02','cat'):[[30,30,51,51]]}
     voc_eval(preds,target,VOC_CLASSES=['cat','dog'])
 
+def test_model()
 if __name__ == '__main__':
     #test_eval()
     # from predict import *

@@ -8,7 +8,7 @@ import os
 from PIL import Image
 import numpy as np
 import math
-Debug = False
+Debug = True
 def gaussian2D(shape, sigma=1):
     m, n = [(ss - 1.) / 2. for ss in shape]
     y, x = np.ogrid[-m:m+1,-n:n+1]
@@ -223,13 +223,13 @@ class listDataset(Dataset):
     
             labpath = imgpath.replace('images', 'labels').replace('JPEGImages', 'labels').replace('.jpg', '.txt').replace('.png','.txt')
             label = torch.zeros(50*5)
-            print(labpath)
+           # print(labpath)
             try:
                 tmp = torch.from_numpy(read_truths_args(labpath, 8.0/img.width).astype('float32'))
             except Exception as e:
                 print(e)
                 tmp = torch.zeros(1,5)
-            print(tmp)
+           # print(tmp)
             tmp = tmp.view(-1)
             tsz = tmp.numel()
             
@@ -264,23 +264,23 @@ class listDataset(Dataset):
 
             radius = gaussian_radius((math.ceil(label[t,4]*output_w*4), math.ceil(label[t,3]*output_w*4)))
             draw_umich_gaussian(hm[int(label[t,0]),:,:], ct_int, math.ceil(radius), k=1)
-            wh[t] = 1. * label[t,3]*output_w*4, 1. * label[t,4]*output_h*4
+            wh[t] = 1. * label[t,3]*output_w, 1. * label[t,4]*output_h
 
             ind[t] = ct_int[1] * output_w + ct_int[0]
             reg[t] = ct - ct_int
             reg_mask[t] = 1
         ret = {'hm': hm, 'reg_mask': reg_mask, 'ind': ind, 'wh': wh, "reg":reg}
-        if Debug:
-            test_img = img
+#        if Debug:
+           # test_img = img
             # print(type(test_img))
-            import cv2
+           # import cv2
             # print(test_img.shape)
-            test_img = test_img.transpose(1, 2, 0)
-            test_img = (test_img * std + mean)
-            cv2.rectangle(test_img,(label[0,1]*384-label[0,3]*384/2,label[0,2]*384-label[0,4]*384/2),(label[0,1]*384+label[0,3]*384/2,label[0,2]*384+label[0,4]*384/2),(255, 0, 0), 2)
-            cv2.imshow("tests",test_img)
-            print(label)
-            cv2.waitKey(0)
+           # test_img = test_img.transpose(1, 2, 0)
+           # test_img = (test_img * std + mean)
+           # cv2.rectangle(test_img,(label[0,1]*384-label[0,3]*384/2,label[0,2]*384-label[0,4]*384/2),(label[0,1]*384+label[0,3]*384/2,label[0,2]*384+label[0,4]*384/2),(255, 0, 0), 2)
+           # cv2.imshow("tests",test_img)
+           # print(label)
+           # cv2.waitKey(0)
         return (img, ret)
 
 

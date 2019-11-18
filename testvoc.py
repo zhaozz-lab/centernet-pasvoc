@@ -123,6 +123,9 @@ color_list = np.array(
 color_list = color_list.reshape((-1, 3)) * 255
 
 
+from models import get_pose_net
+heads = {"hm":num_classes,"wh":2,"reg":2}
+model = get_pose_net(18,heads, head_conv=256)
 
 
 
@@ -185,7 +188,9 @@ def load_model(model, model_path, optimizer=None, resume=False,
 
 
 
-
+model = load_model(model,"model_state.pth")
+model.cuda()
+model.eval()
 
 
 def affine_transform(pt, t):
@@ -331,12 +336,9 @@ def pre_process(image,scale, meta=None):
     # cv2.waitKey(0)
     inp_image = cv2.resize(image,(new_width,new_height))
     
-    # cv2.imshow("testimg",inp_image)
-    # cv2.waitKey(0)    
-    inp_image = ((inp_image / 255. - mean) / std).astype(np.float32)
-    # inp_image = (inp_image / 255).astype(np.float32)
+    # inp_image = ((inp_image / 255. - mean) / std).astype(np.float32)
+    inp_image = (inp_image / 255).astype(np.float32)
     images = inp_image.transpose(2, 0, 1).reshape(1, 3, new_width, new_height)
-
     images = images.astype(np.float32)
     images = torch.from_numpy(images)
     # images = images.totensor()
@@ -407,7 +409,7 @@ def _topk(scores, K=40):
 
 def ctdet_decode(heat, wh, reg=None, cat_spec_wh=False, K=100):
     batch, cat, height, width = heat.size()
-    # print(batch, cat, height, width)
+    print(batch, cat, height, width)
     heat = _nms(heat)
       
     scores, inds, clses, ys, xs = _topk(heat, K=K)
@@ -428,10 +430,10 @@ def ctdet_decode(heat, wh, reg=None, cat_spec_wh=False, K=100):
         wh = wh.view(batch, K, 2)
     clses  = clses.view(batch, K, 1).float()
     scores = scores.view(batch, K, 1)
-    bboxes = torch.cat([xs - wh[..., 0:1] / 2, 
-                        ys - wh[..., 1:2] / 2,
-                        xs + wh[..., 0:1] / 2, 
-                        ys + wh[..., 1:2]/ 2], dim=2)
+    bboxes = torch.cat([xs*4 - wh[..., 0:1] / 2, 
+                        ys*4 - wh[..., 1:2] / 2,
+                        xs*4 + wh[..., 0:1] / 2, 
+                        ys*4 + wh[..., 1:2] / 2], dim=2)
     detections = torch.cat([bboxes, scores, clses], dim=2)
       
     return detections
@@ -511,34 +513,28 @@ def add_coco_bbox(imgs, bbox, cat, conf=1, show_txt=True, img_id='default'):
 
 def detect(image):
     images,meta = pre_process(image,1)
-    
     images = images.to("cuda")
     output,dets= process(images,return_time=True)
     # print("the wh is {}".format(output["wh"]))
+    detection_result = []
     dets = post_process(dets,meta)
     results = merge_outputs(dets)
     images = images.to("cpu")
     for j in range(1, num_classes + 1):
         for bbox in results[j]:
           print("the bbox is {}".format(bbox))
-          if bbox[4] > 0.0:
+          if bbox[4] > 0.3:
+              detection_result.append(results[j])
               image_detection = add_coco_bbox(image,bbox, bbox[4], conf=1, show_txt=True, img_id='default')
     # image_result = cv2.resize(image_detection,(image.shape[1],image.shape[0]))
     cv2.imshow("detection",image_detection)
-    cv2.waitKey(0)
+    cv2.waitKey(10)
     return image_detection
 
 
 if __name__ == '__main__':
     # image = cv2.imread("./54.jpg")
-    from models import get_pose_net
-    heads = {"hm":num_classes,"wh":2,"reg":2}
-    model = get_pose_net(18,heads, head_conv=256)
-    model = load_model(model,"model_state.pth")
-    model.cuda()
-    model.eval()
     video = cv2.VideoCapture("t640480_det_results.avi")
-
 
     # Exit if video not opened.
     if not video.isOpened():
@@ -552,4 +548,4 @@ if __name__ == '__main__':
         sys.exit()
     image_result = detect(frame)
     cv2.imshow("test",image_result)
-    cv2.waitKey(10)
+    cv2.waitKey(0)
