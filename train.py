@@ -218,7 +218,7 @@ def main(opt):
     # run test before start training
     test(0, model, criterion, val_loader, config, writer)
 
-    for epoch in range(1, 100):
+    for epoch in range(1, opt.num__epoch):
         scheduler.step()
 
         train(epoch, model, optimizer, criterion, train_loader, config, writer)

@@ -3,8 +3,10 @@
 #created by xiongzihua
 #
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import numpy as np
+
+
 VOC_CLASSES = (    # always index 0
     'aeroplane', 'bicycle', 'bird', 'boat',
     'bottle', 'bus', 'car', 'cat', 'chair',
@@ -132,18 +134,29 @@ def test_eval():
     target = {('image01','cat'):[[20,20,41,41]],('image01','dog'):[[60,60,91,91]],('image02','cat'):[[30,30,51,51]]}
     voc_eval(preds,target,VOC_CLASSES=['cat','dog'])
 
-def test_model()
+# def test_model(image_path):
+
 if __name__ == '__main__':
     #test_eval()
-    # from predict import *
+    num_classes = 20
+    max_per_image = 100
+    from testvoc import load_model
+    from models import get_pose_net
+    import cv2
+    heads = {"hm":num_classes,"wh":2,"reg":2}
+    model = get_pose_net(18,heads, head_conv=256)
+    model = load_model(model,"model_state1.pth")
+    # model.cuda()
+    model.eval()
     from collections import defaultdict
     from tqdm import tqdm
+    from testvoc import detect
 
     target =  defaultdict(list)
     preds = defaultdict(list)
     image_list = [] #image path list
 
-    f = open('voc2007test.txt')
+    f = open('F:/deeplearning/pytorch-YOLO-v1-master/voc2007test.txt')
     lines = f.readlines()
     file_list = []
     for line in lines:
@@ -164,19 +177,24 @@ if __name__ == '__main__':
             c = int(image_file[5+5*i])
             class_name = VOC_CLASSES[c]
             target[(image_id,class_name)].append([x1,y1,x2,y2])
-    #
-    #start test
-    #
-    print('---start test---')
-    model = resnet50()
-    model.load_state_dict(torch.load('best.pth'))
-    model.eval()
-    model.cuda()
+    
+    model = model.cuda()
     count = 0
     for image_path in tqdm(image_list):
-        result = predict_gpu(model,image_path,root_path='/home/xzh/data/VOCdevkit/VOC2012/allimgs/') #result[[left_up,right_bottom,class_name,image_path],]
-        for (x1,y1),(x2,y2),class_name,image_id,prob in result: #image_id is actually image_path
-            preds[class_name].append([image_id,prob,x1,y1,x2,y2])
+        # print(image_path)
+        # result = predict_gpu(model,image_path,root_path='/home/xzh/data/VOCdevkit/VOC2012/allimgs/') #result[[left_up,right_bottom,class_name,image_path],]
+        root_path = "F:/deeplearning/pytorch-YOLO-v1-master/VOCtrainval_06-Nov-2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages"
+        image_path_test = os.path.join(root_path,image_path)
+        image = cv2.imread(image_path_test)
+        result,detections = detect(image)
+        # print(detections[0])
+        # print("the detection is",len(detections))
+        
+        for x1,y1,x2,y2,prob,class_name in detections:
+
+            preds[class_name].append([image_path,prob,x1,y1,x2,y2])
+        # for (x1,y1),(x2,y2),class_name,image_id,prob in detections: #image_id is actually image_path
+        #     preds[class_name].append([image_id,prob,x1,y1,x2,y2])
     
     print('---start evaluate---')
     voc_eval(preds,target,VOC_CLASSES=VOC_CLASSES)
