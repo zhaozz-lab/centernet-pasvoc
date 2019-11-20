@@ -139,7 +139,7 @@ def test_eval():
 if __name__ == '__main__':
     #test_eval()
     num_classes = 20
-    max_per_image = 100
+    max_per_image = 40
     from testvoc import load_model
     from models import get_pose_net
     import cv2
@@ -150,7 +150,7 @@ if __name__ == '__main__':
     model.eval()
     from collections import defaultdict
     from tqdm import tqdm
-    from testvoc import detect
+    from testvoc import detect_eval
 
     target =  defaultdict(list)
     preds = defaultdict(list)
@@ -160,6 +160,7 @@ if __name__ == '__main__':
     lines = f.readlines()
     file_list = []
     for line in lines:
+        # print("the line is ",line)
         splited = line.strip().split()
         file_list.append(splited)
     f.close()
@@ -177,7 +178,7 @@ if __name__ == '__main__':
             c = int(image_file[5+5*i])
             class_name = VOC_CLASSES[c]
             target[(image_id,class_name)].append([x1,y1,x2,y2])
-    
+    # print(target)
     model = model.cuda()
     count = 0
     for image_path in tqdm(image_list):
@@ -186,15 +187,15 @@ if __name__ == '__main__':
         root_path = "F:/deeplearning/pytorch-YOLO-v1-master/VOCtrainval_06-Nov-2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages"
         image_path_test = os.path.join(root_path,image_path)
         image = cv2.imread(image_path_test)
-        result,detections = detect(image)
-        # print(detections[0])
-        # print("the detection is",len(detections))
+        detections = detect_eval(image)
+        
+        
         
         for x1,y1,x2,y2,prob,class_name in detections:
-
-            preds[class_name].append([image_path,prob,x1,y1,x2,y2])
-        # for (x1,y1),(x2,y2),class_name,image_id,prob in detections: #image_id is actually image_path
-        #     preds[class_name].append([image_id,prob,x1,y1,x2,y2])
-    
+            preds[VOC_CLASSES[class_name]].append([image_path,prob,x1,y1,x2,y2])
+    # print("the prediction and the")
+    # print(preds)
+    # print(preds[0])
+    # print(target[0])
     print('---start evaluate---')
     voc_eval(preds,target,VOC_CLASSES=VOC_CLASSES)

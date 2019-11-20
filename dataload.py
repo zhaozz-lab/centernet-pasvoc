@@ -9,6 +9,8 @@ from PIL import Image
 import numpy as np
 import math
 Debug = True
+
+
 def gaussian2D(shape, sigma=1):
     m, n = [(ss - 1.) / 2. for ss in shape]
     y, x = np.ogrid[-m:m+1,-n:n+1]
@@ -16,6 +18,7 @@ def gaussian2D(shape, sigma=1):
     h = np.exp(-(x * x + y * y) / (2 * sigma * sigma))
     h[h < np.finfo(h.dtype).eps * h.max()] = 0
     return h
+
 
 def draw_umich_gaussian(heatmap, center, radius, k=1):
     diameter = 2 * radius + 1
@@ -41,6 +44,7 @@ def scale_image_channel(im, c, v):
     out = Image.merge(im.mode, tuple(cs))
     return out
 
+
 def distort_image(im, hue, sat, val):
     im = im.convert('HSV')
     cs = list(im.split())
@@ -61,11 +65,13 @@ def distort_image(im, hue, sat, val):
     #constrain_image(im)
     return im
 
+
 def rand_scale(s):
     scale = random.uniform(1, s)
     if(random.randint(1,10000)%2): 
         return scale
     return 1./scale
+
 
 def random_distort_image(im, hue, saturation, exposure):
     dhue = random.uniform(-hue, hue)
@@ -73,6 +79,7 @@ def random_distort_image(im, hue, saturation, exposure):
     dexp = rand_scale(exposure)
     res = distort_image(im, dhue, dsat, dexp)
     return res
+
 
 def data_augmentation(img, shape, jitter, hue, saturation, exposure):
     oh = img.height  
@@ -105,6 +112,7 @@ def data_augmentation(img, shape, jitter, hue, saturation, exposure):
     img = random_distort_image(sized, hue, saturation, exposure)
     
     return img, flip, dx,dy,sx,sy 
+
 
 def fill_truth_detection(labpath, w, h, flip, dx, dy, sx, sy):
     max_boxes = 50
@@ -148,6 +156,7 @@ def fill_truth_detection(labpath, w, h, flip, dx, dy, sx, sy):
     label = np.reshape(label, (-1))
     return label
 
+
 def load_data_detection(imgpath, shape, jitter, hue, saturation, exposure):
     labpath = imgpath.replace('images', 'labels').replace('JPEGImages', 'labels').replace('.jpg', '.txt').replace('.png','.txt')
     
@@ -158,6 +167,7 @@ def load_data_detection(imgpath, shape, jitter, hue, saturation, exposure):
     label = fill_truth_detection(labpath, img.width, img.height, flip, dx, dy, 1./sx, 1./sy)
     
     return img,label
+
 
 def gaussian_radius(det_size, min_overlap=0.7):
     height, width = det_size

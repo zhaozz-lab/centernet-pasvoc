@@ -65,8 +65,6 @@ def train(epoch, model, optimizer, criterion, train_loader, config, writer):
         label['ind'] = label['ind'].cuda()
         label['reg_mask'] = label['reg_mask'].cuda()
         label['reg'] = label['reg'].cuda()
-        label['hm'] = label['hm'].cuda()
-
        
         loss,loss_states = criterion(outputs, label)
         loss.mean()
@@ -122,7 +120,6 @@ def test(epoch, model, criterion, val_loader, config, writer):
         label['ind'] = label['ind'].cuda()
         label['reg_mask'] = label['reg_mask'].cuda()
         label['reg'] = label['reg'].cuda()
-        label['hm'] = label['hm'].cuda()
 
     
         loss = criterion(output, label)

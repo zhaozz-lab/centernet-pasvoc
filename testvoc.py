@@ -12,30 +12,21 @@ import time
 import torchvision
 from torchvision import datasets, transforms
 import numpy as np
-# from losses import CtdetLoss
 import cv2
 import torch.nn as nn
 
 num_classes = 20
-max_per_image = 100
+max_per_image = 10
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
-coco_class_name = [
-     'person', 'bicycle', 'car', 'motorcycle', 'airplane',
-     'bus', 'train', 'truck', 'boat', 'traffic light', 'fire hydrant',
-     'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse',
-     'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'backpack',
-     'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis',
-     'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove',
-     'skateboard', 'surfboard', 'tennis racket', 'bottle', 'wine glass',
-     'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple', 'sandwich',
-     'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake',
-     'chair', 'couch', 'potted plant', 'bed', 'dining table', 'toilet', 'tv',
-     'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave',
-     'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase',
-     'scissors', 'teddy bear', 'hair drier', 'toothbrush'
-]
-
+VOC_CLASSES = (    # always index 0
+    'aeroplane', 'bicycle', 'bird', 'boat',
+    'bottle', 'bus', 'car', 'cat', 'chair',
+    'cow', 'diningtable', 'dog', 'horse',
+    'motorbike', 'person', 'pottedplant',
+    'sheep', 'sofa', 'train', 'tvmonitor')
 color_list = np.array(
         [
             1.000, 1.000, 1.000,
@@ -357,62 +348,11 @@ def ctdet_decode(heat, wh, reg=None, cat_spec_wh=False, K=100):
     return detections
 
 
-def get_dir(src_point, rot_rad):
-    sn, cs = np.sin(rot_rad), np.cos(rot_rad)
-
-    src_result = [0, 0]
-    src_result[0] = src_point[0] * cs - src_point[1] * sn
-    src_result[1] = src_point[0] * sn + src_point[1] * cs
-
-    return src_result
-
-
-def get_3rd_point(a, b):
-    direct = a - b
-    return b + np.array([-direct[1], direct[0]], dtype=np.float32)
-
-
-def get_affine_transform(center,
-                         scale,
-                         rot,
-                         output_size,
-                         shift=np.array([0, 0], dtype=np.float32),
-                         inv=0):
-    if not isinstance(scale, np.ndarray) and not isinstance(scale, list):
-        scale = np.array([scale, scale], dtype=np.float32)
-
-    scale_tmp = scale
-    src_w = scale_tmp[0]
-    dst_w = output_size[0]
-    dst_h = output_size[1]
-
-    rot_rad = np.pi * rot / 180
-    src_dir = get_dir([0, src_w * -0.5], rot_rad)
-    dst_dir = np.array([0, dst_w * -0.5], np.float32)
-
-    src = np.zeros((3, 2), dtype=np.float32)
-    dst = np.zeros((3, 2), dtype=np.float32)
-    src[0, :] = center + scale_tmp * shift
-    src[1, :] = center + src_dir + scale_tmp * shift
-    dst[0, :] = [dst_w * 0.5, dst_h * 0.5]
-    dst[1, :] = np.array([dst_w * 0.5, dst_h * 0.5], np.float32) + dst_dir
-
-    src[2:, :] = get_3rd_point(src[0, :], src[1, :])
-    dst[2:, :] = get_3rd_point(dst[0, :], dst[1, :])
-
-    if inv:
-        trans = cv2.getAffineTransform(np.float32(dst), np.float32(src))
-    else:
-        trans = cv2.getAffineTransform(np.float32(src), np.float32(dst))
-
-    return trans
-
-
 def add_coco_bbox(imgs, bbox, cat, conf=1, show_txt=True, img_id='default'): 
     bbox = np.array(bbox, dtype=np.int32)
     cat = int(cat)
     c = color_list[cat].tolist()
-    txt = '{}{:.1f}'.format(coco_class_name[cat], conf)
+    txt = '{}{:.1f}'.format(VOC_CLASSES[cat], conf)
     font = cv2.FONT_HERSHEY_SIMPLEX
     cat_size = cv2.getTextSize(txt, font, 0.5, 2)[0]
     cv2.rectangle(
@@ -426,6 +366,24 @@ def add_coco_bbox(imgs, bbox, cat, conf=1, show_txt=True, img_id='default'):
     return imgs
 
 
+def detect_eval(image):
+    images,meta = pre_process(image,1)
+    images = images.to("cuda")
+    output,dets= process(images,return_time=True)
+    detection_result = []
+    dets = post_process(dets,meta)
+    results = merge_outputs(dets)
+    # images = images.to("cpu")
+    for j in range(1, num_classes + 1):
+        for bbox in results[j]:
+          if bbox[4] > 0.3:
+              detection_result.append([bbox[0],bbox[1],bbox[2],bbox[3],bbox[4],j-1])
+    
+    return detection_result    
+
+
+
+
 def detect(image):
     images,meta = pre_process(image,1)
     images = images.to("cuda")
@@ -434,14 +392,14 @@ def detect(image):
     dets = post_process(dets,meta)
     results = merge_outputs(dets)
     images = images.to("cpu")
-    image_detection = np.zeros((384,384,3))
+    # image_detection = np.zeros((384,384,3))
     for j in range(1, num_classes + 1):
         for bbox in results[j]:
           # print("the bbox is {}".format(bbox))
           # print("the type of bbox is     ",type(bbox))
-          if bbox[4] > 0.2:
+          if bbox[4] > 0.3:
               detection_result.append([bbox[0],bbox[1],bbox[2],bbox[3],bbox[4],j])
-              image_detection = add_coco_bbox(image,bbox, bbox[4], conf=1, show_txt=True, img_id='default')
+              image_detection = add_coco_bbox(image,bbox, j-1, conf=1, show_txt=True, img_id='default')
           # else:
           #     detection_result.append([0,0,0,0,0])
     # cv2.imshow("detection",image_detection)
@@ -452,7 +410,7 @@ def detect(image):
 from models import get_pose_net
 heads = {"hm":num_classes,"wh":2,"reg":2}
 model = get_pose_net(18,heads, head_conv=256)
-model = load_model(model,"model_state.pth")
+model = load_model(model,"model_state1.pth")
 model.cuda()
 model.eval()
 
@@ -461,12 +419,12 @@ if __name__ == '__main__':
     from models import get_pose_net
     heads = {"hm":num_classes,"wh":2,"reg":2}
     model = get_pose_net(18,heads, head_conv=256)
-    model = load_model(model,"model_state.pth")
+    model = load_model(model,"model_state1.pth")
     model.cuda()
     model.eval()
 
-    # video = cv2.VideoCapture("t640480_det_results.avi")
-    video = cv2.VideoCapture("MOT16-11.mp4")
+    video = cv2.VideoCapture("t640480_det_results.avi")
+    # video = cv2.VideoCapture("MOT16-11.mp4")
 
     # Exit if video not opened.
     if not video.isOpened():
