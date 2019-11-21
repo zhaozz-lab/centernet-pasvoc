@@ -16,7 +16,7 @@ import cv2
 import torch.nn as nn
 
 num_classes = 20
-max_per_image = 10
+max_per_image = 50
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
@@ -392,6 +392,7 @@ def detect(image):
     dets = post_process(dets,meta)
     results = merge_outputs(dets)
     images = images.to("cpu")
+    image_detection = None
     # image_detection = np.zeros((384,384,3))
     for j in range(1, num_classes + 1):
         for bbox in results[j]:
@@ -423,20 +424,33 @@ if __name__ == '__main__':
     model.cuda()
     model.eval()
 
-    video = cv2.VideoCapture("t640480_det_results.avi")
-    # video = cv2.VideoCapture("MOT16-11.mp4")
+    # video = cv2.VideoCapture("t640480_det_results.avi")
+    # # video = cv2.VideoCapture("MOT16-11.mp4")
 
-    # Exit if video not opened.
-    if not video.isOpened():
-        print("Could not open video")
-        sys.exit()
+    # # Exit if video not opened.
+    # if not video.isOpened():
+    #     print("Could not open video")
+    #     sys.exit()
     
-    # Read first frame.
-    ok, frame = video.read()
-    if not ok:
-        print('Cannot read video file')
-        sys.exit()
-    image_result,detections = detect(frame)
-    print(detections)
-    cv2.imshow("test",image_result)
-    cv2.waitKey(0)
+    # # Read first frame.
+    # ok, frame = video.read()
+    # if not ok:
+    #     print('Cannot read video file')
+    #     sys.exit()
+    # image_result,detections = detect(frame)
+    # print(detections)
+    # cv2.imshow("test",image_result)
+    # cv2.waitKey(0)
+    imagePath = "F:/deeplearning/pytorch-YOLO-v1-master/VOCtrainval_06-Nov-2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages"
+    files = os.listdir(imagePath)
+    for file in files:
+        filename = os.path.join(imagePath,file)
+        image = cv2.imread(filename,1)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image_result,detections = detect(image)
+        print(detections)
+        if image_result is None:
+            continue
+        cv2.imshow("test",image_result)
+        cv2.waitKey(0)
+

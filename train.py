@@ -65,6 +65,7 @@ def train(epoch, model, optimizer, criterion, train_loader, config, writer):
         label['ind'] = label['ind'].cuda()
         label['reg_mask'] = label['reg_mask'].cuda()
         label['reg'] = label['reg'].cuda()
+
        
         loss,loss_states = criterion(outputs, label)
         loss.mean()
@@ -120,6 +121,7 @@ def test(epoch, model, criterion, val_loader, config, writer):
         label['ind'] = label['ind'].cuda()
         label['reg_mask'] = label['reg_mask'].cuda()
         label['reg'] = label['reg'].cuda()
+        label['hm'] = label['hm'].cuda()
 
     
         loss = criterion(output, label)
@@ -146,29 +148,64 @@ def test(epoch, model, criterion, val_loader, config, writer):
     #     for name, param in model.named_parameters():
     #         writer.add_histogram(name, param, global_step)
 
-    return angle_error_meter.avg
+def load_model(model, model_path, optimizer=None, resume=False, 
+               lr=None, lr_step=None):
+  start_epoch = 0
+  # checkpoint = torch.load(model_path, map_location=lambda storage, loc: storage)
 
+  checkpoint = torch.load(model_path, map_location = torch.device('cpu'))
+  # print('loaded {}, epoch {}'.format(model_path, checkpoint['epoch']))
+  state_dict_ = checkpoint['state_dict']
+  state_dict = {}
+  
+  # convert data_parallal to model
+  for k in state_dict_:
+    if k.startswith('module') and not k.startswith('module_list'):
+      state_dict[k[7:]] = state_dict_[k]
+    else:
+      state_dict[k] = state_dict_[k]
+  model_state_dict = model.state_dict()
 
+  # check loaded parameters and created model parameters
+  msg = 'If you see this, your model does not fully load the ' + \
+        'pre-trained weight. Please make sure ' + \
+        'you have correctly specified --arch xxx ' + \
+        'or set the correct --num_classes for your own dataset.'
+  for k in state_dict:
+    if k in model_state_dict:
+      if state_dict[k].shape != model_state_dict[k].shape:
+        print('Skip loading parameter {}, required shape{}, '\
+              'loaded shape{}. {}'.format(
+          k, model_state_dict[k].shape, state_dict[k].shape, msg))
+        state_dict[k] = model_state_dict[k]
+    else:
+      print('Drop parameter {}.'.format(k) + msg)
+  for k in model_state_dict:
+    if not (k in state_dict):
+      print('No param {}.'.format(k) + msg)
+      state_dict[k] = model_state_dict[k]
+  model.load_state_dict(state_dict, strict=False)
+  return model
 
 
 def main(opt):
     torch.manual_seed(opt.seed)
     torch.backends.cudnn.benchmark = not opt.not_cuda_benchmark and not opt.test
-    train_path = "../VOC/train.txt"
-    val_path = "../VOC/val.txt"
-    # train_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_train.txt"
-    # val_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_val.txt"
+    # train_path = "../VOC/train.txt"
+    # val_path = "../VOC/val.txt"
+    train_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_train.txt"
+    val_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_val.txt"
     # optimizer = torch.optim.Adam(model.parameters(), opt.lr)
     start_epoch = 0
     # print('Setting up data...')
-    batchsize = 32 
+    batchsize = 1 
     imageshape=(384,384)
     val_loader = torch.utils.data.DataLoader(
             listDataset(val_path, shape=imageshape,shuffle = False, 
             train=False,seen = 0,batch_size=batchsize), 
         
         shuffle=False,
-        num_workers=8,
+        num_workers=0,
         pin_memory=True,
         batch_size=batchsize, 
     ) 
@@ -179,7 +216,7 @@ def main(opt):
             train=True,seen = 0,batch_size=batchsize),  
         batch_size=batchsize, 
         shuffle=True,
-        num_workers=8,
+        num_workers=0,
         pin_memory=True,  
     )  
     print("the train_loader size is {}".format(len(train_loader)))
@@ -194,6 +231,7 @@ def main(opt):
     from models import get_pose_net
     heads = {"hm":20,"wh":2,"reg":2}
     model = get_pose_net(18,heads, head_conv=256)
+    model = load_model(model,"model_state.pth")
     model.cuda()
 
     criterion = CtdetLoss(opt)
@@ -215,7 +253,7 @@ def main(opt):
     # run test before start training
     test(0, model, criterion, val_loader, config, writer)
 
-    for epoch in range(1, opt.num__epoch):
+    for epoch in range(start_epoch, opt.num_epochs):
         scheduler.step()
 
         train(epoch, model, optimizer, criterion, train_loader, config, writer)
@@ -230,7 +268,7 @@ def main(opt):
             ('angle_error', angle_error),
         ])
         outdir = "./"
-        model_path = os.path.join(outdir, 'model_state1.pth')
+        model_path = os.path.join(outdir, 'model_state.pth')
         torch.save(state, model_path)
 
    # if args.tensorboard:

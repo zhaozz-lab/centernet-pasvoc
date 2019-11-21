@@ -5,6 +5,20 @@
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import numpy as np
+num_classes = 20
+max_per_image = 40
+from testvoc import load_model
+from models import get_pose_net
+import cv2
+heads = {"hm":num_classes,"wh":2,"reg":2}
+model = get_pose_net(18,heads, head_conv=256)
+model = load_model(model,"model_state1.pth")
+# model.cuda()
+model.eval()
+from collections import defaultdict
+from tqdm import tqdm
+from testvoc import detect_eval
+
 
 
 VOC_CLASSES = (    # always index 0
@@ -138,20 +152,6 @@ def test_eval():
 
 if __name__ == '__main__':
     #test_eval()
-    num_classes = 20
-    max_per_image = 40
-    from testvoc import load_model
-    from models import get_pose_net
-    import cv2
-    heads = {"hm":num_classes,"wh":2,"reg":2}
-    model = get_pose_net(18,heads, head_conv=256)
-    model = load_model(model,"model_state1.pth")
-    # model.cuda()
-    model.eval()
-    from collections import defaultdict
-    from tqdm import tqdm
-    from testvoc import detect_eval
-
     target =  defaultdict(list)
     preds = defaultdict(list)
     image_list = [] #image path list
@@ -182,20 +182,14 @@ if __name__ == '__main__':
     model = model.cuda()
     count = 0
     for image_path in tqdm(image_list):
-        # print(image_path)
-        # result = predict_gpu(model,image_path,root_path='/home/xzh/data/VOCdevkit/VOC2012/allimgs/') #result[[left_up,right_bottom,class_name,image_path],]
         root_path = "F:/deeplearning/pytorch-YOLO-v1-master/VOCtrainval_06-Nov-2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages"
         image_path_test = os.path.join(root_path,image_path)
         image = cv2.imread(image_path_test)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         detections = detect_eval(image)
-        
-        
-        
+                
         for x1,y1,x2,y2,prob,class_name in detections:
             preds[VOC_CLASSES[class_name]].append([image_path,prob,x1,y1,x2,y2])
-    # print("the prediction and the")
-    # print(preds)
-    # print(preds[0])
-    # print(target[0])
+
     print('---start evaluate---')
     voc_eval(preds,target,VOC_CLASSES=VOC_CLASSES)

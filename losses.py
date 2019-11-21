@@ -293,7 +293,7 @@ class CtdetLoss(torch.nn.Module):
           batch['ind'].detach().cpu().numpy(), 
           output['wh'].shape[3], output['wh'].shape[2])).to(opt.device)
       if opt.eval_oracle_offset:
-        output['reg'] = torch.from_numpy(gen_oracle_map(
+          output['reg'] = torch.from_numpy(gen_oracle_map(
           batch['reg'].detach().cpu().numpy(), 
           batch['ind'].detach().cpu().numpy(), 
           output['reg'].shape[3], output['reg'].shape[2])).to(opt.device)
@@ -338,10 +338,22 @@ class CtdetLoss(torch.nn.Module):
 
 
 if __name__ == '__main__':
-  input = torch.randn(1,50, 2)
-  target = torch.zeros(1,50, 2)
-  mask = torch.randn(1,50, 2)
-  # print(target)
-  print(F.l1_loss(input*mask, target*mask, size_average=False))
+  # input = torch.randn(1,50, 2)
+  # target = torch.zeros(1,50, 2)
+  # mask = torch.randn(1,50, 2)
+  # # print(target)
+  # print(F.l1_loss(input*mask, target*mask, size_average=False))
+  from opts import opts
+  opt = opts().parse()
+  print(opt.mse_loss)
+  print(opt.reg_loss)
+  print(opt.dense_wh)
 
+    # self.crit_reg = RegL1Loss() if opt.reg_loss == 'l1' else \
+              # RegLoss() if opt.reg_loss == 'sl1' else None
+    # self.crit_wh = torch.nn.L1Loss(reduction='sum') if opt.dense_wh else \
+              # NormRegL1Loss() if opt.norm_wh else \
+              # RegWeightedL1Loss() if opt.cat_spec_wh else self.crit_reg
+    # self.opt = opt
+  criterion = CtdetLoss(opt)
       
