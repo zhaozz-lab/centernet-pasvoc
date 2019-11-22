@@ -263,7 +263,7 @@ class listDataset(Dataset):
               [label[t,1]*output_w, label[t,2]*output_h], dtype=np.float32)
             ct_int = ct.astype(np.int32)
 
-            radius = gaussian_radius((math.ceil(label[t,4]*output_w*4), math.ceil(label[t,3]*output_w*4)))
+            radius = gaussian_radius((math.ceil(label[t,4]*output_w), math.ceil(label[t,3]*output_w)))
             draw_umich_gaussian(hm[int(label[t,0]),:,:], ct_int, math.ceil(radius), k=1)
             wh[t] = 1. * label[t,3]*output_w, 1. * label[t,4]*output_h
 
@@ -281,7 +281,7 @@ class listDataset(Dataset):
             cv2.rectangle(test_img,(label[0,1]*384-label[0,3]*384/2,label[0,2]*384-label[0,4]*384/2),(label[0,1]*384+label[0,3]*384/2,label[0,2]*384+label[0,4]*384/2),(255, 0, 0), 2)
             cv2.imshow("tests",test_img)
             # print(label)
-            cv2.waitKey(0)
+            # cv2.waitKey(0)
             from collections import Counter
             print(sum(hm.reshape(-1,1)==1))
             cv2.imshow("test_heatmap",hm[int(label[0,0]),:,:])

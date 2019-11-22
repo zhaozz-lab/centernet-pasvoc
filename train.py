@@ -73,7 +73,7 @@ def train(epoch, model, optimizer, criterion, train_loader, config, writer):
         optimizer.step()
         num = image.size(0)
         loss_meter.update(loss.item(), num)
-        
+        # print("the loss is {}".format(loss_states))
 
         if config['tensorboard']:
             writer.add_scalar('Train/RunningLoss', loss_meter.val, global_step)
@@ -94,6 +94,9 @@ def train(epoch, model, optimizer, criterion, train_loader, config, writer):
     if config['tensorboard']:
         writer.add_scalar('Train/Loss', loss_meter.avg, epoch)
         writer.add_scalar('Train/Time', elapsed, epoch)
+        writer.add_scalar('Train/heatmaploss',loss_states['hm_loss'].mean()/image.size(0),epoch)
+        writer.add_scalar('Train/wh_loss',loss_states['wh_loss'].mean()/image.size(0),epoch)
+        writer.add_scalar('Train/off_loss',loss_states['off_loss'].mean()/image.size(0),epoch)
 
 
 def test(epoch, model, criterion, val_loader, config, writer):
@@ -121,10 +124,9 @@ def test(epoch, model, criterion, val_loader, config, writer):
         label['ind'] = label['ind'].cuda()
         label['reg_mask'] = label['reg_mask'].cuda()
         label['reg'] = label['reg'].cuda()
-        label['hm'] = label['hm'].cuda()
 
     
-        loss = criterion(output, label)
+        loss,loss_states = criterion(output, label)
         
         num = image.size(0)
         loss_meter.update(loss[0].item(), num)
@@ -142,7 +144,11 @@ def test(epoch, model, criterion, val_loader, config, writer):
     if config['tensorboard']:
         if epoch > 0:
             writer.add_scalar('Test/Loss', loss_meter.avg, epoch)
+            writer.add_scalar('Train/heatmaploss',loss_states['hm_loss'].mean()/image.size(0),epoch)
+            writer.add_scalar('Train/wh_loss',loss_states['wh_loss'].mean()/image.size(0),epoch)
+            writer.add_scalar('Train/off_loss',loss_states['off_loss'].mean()/image.size(0),epoch)
         writer.add_scalar('Test/Time', elapsed, epoch)
+    return loss_meter.avg
 
     # if config['tensorboard_parameters']:
     #     for name, param in model.named_parameters():
@@ -191,21 +197,21 @@ def load_model(model, model_path, optimizer=None, resume=False,
 def main(opt):
     torch.manual_seed(opt.seed)
     torch.backends.cudnn.benchmark = not opt.not_cuda_benchmark and not opt.test
-    # train_path = "../VOC/train.txt"
-    # val_path = "../VOC/val.txt"
-    train_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_train.txt"
-    val_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_val.txt"
+    train_path = "../VOC/train.txt"
+    val_path = "../VOC/val.txt"
+    # train_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_train.txt"
+    # val_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_val.txt"
     # optimizer = torch.optim.Adam(model.parameters(), opt.lr)
     start_epoch = 0
     # print('Setting up data...')
-    batchsize = 1 
+    batchsize = 32 
     imageshape=(384,384)
     val_loader = torch.utils.data.DataLoader(
             listDataset(val_path, shape=imageshape,shuffle = False, 
             train=False,seen = 0,batch_size=batchsize), 
         
         shuffle=False,
-        num_workers=0,
+        num_workers=8,
         pin_memory=True,
         batch_size=batchsize, 
     ) 
@@ -216,7 +222,7 @@ def main(opt):
             train=True,seen = 0,batch_size=batchsize),  
         batch_size=batchsize, 
         shuffle=True,
-        num_workers=0,
+        num_workers=8,
         pin_memory=True,  
     )  
     print("the train_loader size is {}".format(len(train_loader)))
@@ -230,17 +236,18 @@ def main(opt):
 
     from models import get_pose_net
     heads = {"hm":20,"wh":2,"reg":2}
-    model = get_pose_net(18,heads, head_conv=256)
-    model = load_model(model,"model_state.pth")
+    model = get_pose_net(18,heads, head_conv=64)
+#    model = load_model(model,"model_state.pth")
     model.cuda()
 
     criterion = CtdetLoss(opt)
-    optimizer = torch.optim.SGD(
-        model.parameters(),
-        lr=opt.lr,
-        momentum = 0.9,
-        weight_decay=1e-4
-        )
+    # optimizer = torch.optim.SGD(
+    #     model.parameters(),
+    #     lr=opt.lr,
+    #     momentum = 0.9,
+    #     weight_decay=1e-4
+    #     )
+    optimizer = torch.optim.Adam(model.parameters(), opt.lr)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(
         optimizer, milestones=opt.lr_step, gamma=0.1)
 
@@ -249,7 +256,8 @@ def main(opt):
         'tensorboard_images': True,
         'tensorboard_parameters': True,
     }
-
+    
+    best_val = 1000
     # run test before start training
     test(0, model, criterion, val_loader, config, writer)
 
@@ -257,7 +265,7 @@ def main(opt):
         scheduler.step()
 
         train(epoch, model, optimizer, criterion, train_loader, config, writer)
-        angle_error = test(epoch, model, criterion, val_loader, config,
+        test_val = test(epoch, model, criterion, val_loader, config,
                            writer)
 
         state = OrderedDict([
@@ -267,9 +275,11 @@ def main(opt):
             ('epoch', epoch),
             ('angle_error', angle_error),
         ])
-        outdir = "./"
-        model_path = os.path.join(outdir, 'model_state.pth')
-        torch.save(state, model_path)
+
+        if test_val < best_val:
+            outdir = "./"
+            model_path = os.path.join(outdir, opt.model_path)
+            torch.save(state, model_path)
 
    # if args.tensorboard:
    #     outpath = os.path.join(outdir, 'all_scalars.json')

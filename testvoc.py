@@ -376,7 +376,7 @@ def detect_eval(image):
     # images = images.to("cpu")
     for j in range(1, num_classes + 1):
         for bbox in results[j]:
-          if bbox[4] > 0.3:
+          if bbox[4] > 0.1:
               detection_result.append([bbox[0],bbox[1],bbox[2],bbox[3],bbox[4],j-1])
     
     return detection_result    
@@ -410,19 +410,19 @@ def detect(image):
 
 from models import get_pose_net
 heads = {"hm":num_classes,"wh":2,"reg":2}
-model = get_pose_net(18,heads, head_conv=256)
-model = load_model(model,"model_state1.pth")
+model = get_pose_net(18,heads, head_conv=64)
+model = load_model(model,"ctdet_pascal_resdcn18_384.pth")
 model.cuda()
 model.eval()
 
 
 if __name__ == '__main__':
-    from models import get_pose_net
-    heads = {"hm":num_classes,"wh":2,"reg":2}
-    model = get_pose_net(18,heads, head_conv=256)
-    model = load_model(model,"model_state1.pth")
-    model.cuda()
-    model.eval()
+    # from models import get_pose_net
+    # heads = {"hm":num_classes,"wh":2,"reg":2}
+    # model = get_pose_net(18,heads, head_conv=256)
+    # model = load_model(model,"model_state1.pth")
+    # model.cuda()
+    # model.eval()
 
     # video = cv2.VideoCapture("t640480_det_results.avi")
     # # video = cv2.VideoCapture("MOT16-11.mp4")
