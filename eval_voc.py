@@ -7,17 +7,19 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import numpy as np
 num_classes = 20
 max_per_image = 40
-from testvoc import load_model
+from eval_utils import load_model
 from models import get_pose_net
 import cv2
 heads = {"hm":num_classes,"wh":2,"reg":2}
 model = get_pose_net(18,heads, head_conv=64)
+# model = load_model(model,"./models/model_origin.pth")
 model = load_model(model,"ctdet_pascal_resdcn18_384.pth")
 # model.cuda()
 model.eval()
 from collections import defaultdict
 from tqdm import tqdm
 from testvoc import detect_eval
+# from detect import detect_eval
 
 
 
@@ -186,7 +188,7 @@ if __name__ == '__main__':
         image_path_test = os.path.join(root_path,image_path)
         image = cv2.imread(image_path_test)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        detections = detect_eval(image)
+        detections = detect_eval(image,model,num_classes,max_per_image)
                 
         for x1,y1,x2,y2,prob,class_name in detections:
             preds[VOC_CLASSES[class_name]].append([image_path,prob,x1,y1,x2,y2])
