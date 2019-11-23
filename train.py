@@ -129,7 +129,7 @@ def test(epoch, model, criterion, val_loader, config, writer):
         loss,loss_states = criterion(output, label)
         
         num = image.size(0)
-        loss_meter.update(loss[0].item(), num)
+        loss_meter.update(loss.item(), num)
         
     elapsed = time.time() - start
     logger.info('Elapsed {:.2f}'.format(elapsed))
@@ -241,13 +241,8 @@ def main(opt):
     model.cuda()
 
     criterion = CtdetLoss(opt)
-    # optimizer = torch.optim.SGD(
-    #     model.parameters(),
-    #     lr=opt.lr,
-    #     momentum = 0.9,
-    #     weight_decay=1e-4
-    #     )
-    optimizer = torch.optim.Adam(model.parameters(), opt.lr)
+   # optimizer = torch.optim.SGD(model.parameters(),lr=opt.lr, momentum = 0.9,weight_decay=1e-4)
+    optimizer = torch.optim.Adam(model.parameters(), opt.lr,weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(
         optimizer, milestones=opt.lr_step, gamma=0.1)
 
@@ -273,7 +268,7 @@ def main(opt):
             ('state_dict', model.state_dict()),
             ('optimizer', optimizer.state_dict()),
             ('epoch', epoch),
-            ('angle_error', angle_error),
+            ('angle_error', test_val),
         ])
 
         if test_val < best_val:

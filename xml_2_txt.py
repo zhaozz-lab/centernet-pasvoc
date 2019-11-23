@@ -32,22 +32,25 @@ def parse_rec(filename):
     return objects
 
 txt_file = open('voc2007test.txt','w')
-test_file = open('voc07testimg.txt','r')
+test_file = open('../VOC/2007_test.txt','r')
 lines = test_file.readlines()
-lines = [x[:-1] for x in lines]
+lines = [x[-11:-5] for x in lines]
 print(lines)
 
-Annotations = '/home/xzh/data/VOCdevkit/VOC2007/Annotations/'
+Annotations = '../VOC/VOCdevkit/VOC2007/Annotations/'
 xml_files = os.listdir(Annotations)
-
+#print(xml_files)
 count = 0
 for xml_file in xml_files:
     count += 1
+   # print(xml_file.split(',')[0])
     if xml_file.split('.')[0] not in lines:
         # print(xml_file.split('.')[0])
         continue
+#    print(xml_file)
     image_path = xml_file.split('.')[0] + '.jpg'
     results = parse_rec(Annotations + xml_file)
+    print(results)
     if len(results)==0:
         print(xml_file)
         continue
