@@ -198,7 +198,7 @@ class listDataset(Dataset):
        self.batch_size = batch_size
        self.num_workers = num_workers
        self.num_classes = 20
-       self.max_objs = 50
+       self.max_objs = 100
 
     def __len__(self):
         return self.nSamples
@@ -225,7 +225,7 @@ class listDataset(Dataset):
             label = torch.zeros(50*5)
            # print(labpath)
             try:
-                tmp = torch.from_numpy(read_truths_args(labpath, 8.0/img.width).astype('float32'))
+                tmp = torch.from_numpy(read_truths_args(labpath, 0).astype('float32'))
             except Exception as e:
                 print(e)
                 tmp = torch.zeros(1,5)
@@ -238,8 +238,12 @@ class listDataset(Dataset):
             elif tsz > 0:
                 label[0:tsz] = tmp
 
-        mean = np.array([[[0.408,0.447,0.47 ]]])
-        std = np.array([[[0.289, 0.274,0.278]]])
+       # mean = np.array([[[0.408,0.447,0.47 ]]])
+       # std = np.array([[[0.289, 0.274,0.278]]])
+        mean = np.array([0.485, 0.456, 0.406],
+                   dtype=np.float32).reshape(1, 1, 3)
+        std  = np.array([0.229, 0.224, 0.225],
+                   dtype=np.float32).reshape(1, 1, 3)
         img = np.array(img)
         img = ((img / 255. - mean) / std).astype(np.float32)
         img = img.transpose(2, 0, 1)
@@ -255,7 +259,6 @@ class listDataset(Dataset):
         reg_mask = np.zeros((self.max_objs), dtype=np.uint8)        
         output_w = self.shape[1]//4
         output_h = self.shape[0]//4
-        # print("the label is {}".format(label))
         for t in range(50):
             if label[t,1] == 0:
                 break
@@ -271,21 +274,17 @@ class listDataset(Dataset):
             reg[t] = ct - ct_int
             reg_mask[t] = 1
         ret = {'hm': hm, 'reg_mask': reg_mask, 'ind': ind, 'wh': wh, "reg":reg}
-        if Debug:
-            test_img = img
+#        if Debug:
+           # test_img = img
             # print(type(test_img))
-            import cv2
+           # import cv2
             # print(test_img.shape)
-            test_img = test_img.transpose(1, 2, 0)
-            test_img = (test_img * std + mean)
-            cv2.rectangle(test_img,(label[0,1]*384-label[0,3]*384/2,label[0,2]*384-label[0,4]*384/2),(label[0,1]*384+label[0,3]*384/2,label[0,2]*384+label[0,4]*384/2),(255, 0, 0), 2)
-            cv2.imshow("tests",test_img)
-            # print(label)
-            # cv2.waitKey(0)
-            from collections import Counter
-            print(sum(hm.reshape(-1,1)==1))
-            cv2.imshow("test_heatmap",hm[int(label[0,0]),:,:])
-            cv2.waitKey(0)
+           # test_img = test_img.transpose(1, 2, 0)
+           # test_img = (test_img * std + mean)
+           # cv2.rectangle(test_img,(label[0,1]*384-label[0,3]*384/2,label[0,2]*384-label[0,4]*384/2),(label[0,1]*384+label[0,3]*384/2,label[0,2]*384+label[0,4]*384/2),(255, 0, 0), 2)
+           # cv2.imshow("tests",test_img)
+           # print(label)
+           # cv2.waitKey(0)
         return (img, ret)
 
 

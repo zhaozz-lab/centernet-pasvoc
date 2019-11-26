@@ -116,7 +116,10 @@ class opts(object):
     self.parser.add_argument('--keep_res', action='store_true',
                              help='keep the original resolution'
                                   ' during validation.')
-
+    
+    self.parser.add_argument('--model_path', default="model_state",
+                             help='keep the original resolution'
+                                  ' during validation.')
     # dataset
     self.parser.add_argument('--not_rand_crop', action='store_true',
                              help='not use the random crop data augmentation'

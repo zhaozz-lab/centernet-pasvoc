@@ -280,13 +280,16 @@ def merge_outputs(detections,num_classes,max_per_image):
 
 def pre_process(image,scale, meta=None):
     height, width = image.shape[0:2]
-    mean = np.array([[[0.408,0.447,0.47 ]]])
-    std = np.array([[[0.289, 0.274,0.278]]])
-
+    # mean = np.array([[[0.408,0.447,0.47 ]]])
+    # std = np.array([[[0.289, 0.274,0.278]]])
+    mean = np.array([0.485, 0.456, 0.406],
+                   dtype=np.float32).reshape(1, 1, 3)
+    std  = np.array([0.229, 0.224, 0.225],
+                   dtype=np.float32).reshape(1, 1, 3)
     c = np.array([width / 2., height / 2.], dtype=np.float32)
     s = max(width, height) * 1.0
 
-    new_width,new_height = 512,512
+    new_width,new_height = 384,384
 
     trans_input = get_affine_transform(c, s, 0, [new_width, new_height])
     # resized_image = cv2.resize(image, (width, height))
@@ -297,11 +300,14 @@ def pre_process(image,scale, meta=None):
     # cv2.imshow("inp_image",inp_image)
     # cv2.waitKey(10)
     
-    inp_image = ((inp_image / 255. - mean) / std).astype(np.float32)
-    images = inp_image.transpose(2, 0, 1).reshape(1, 3, new_width, new_height)
+    inp_image = (inp_image.astype(np.float32) / 255.)
+    inp = (inp - mean) / std
+    # images = inp_image.transpose(2, 0, 1).reshape(1, 3, new_width, new_height)
+    images = inp_image.transpose(2, 0, 1)
+   
     images = images.astype(np.float32)
     images = torch.from_numpy(images)
-
+    images = torch.unsqueeze(images,0)
     meta = {'c': c, 's': s,
             'out_height': new_width // 4,
             'out_width': new_height // 4}
@@ -409,43 +415,6 @@ def get_dir(src_point, rot_rad):
 def get_3rd_point(a, b):
     direct = a - b
     return b + np.array([-direct[1], direct[0]], dtype=np.float32)
-
-
-
-def get_affine_transform(center,
-                         scale,
-                         rot,
-                         output_size,
-                         shift=np.array([0, 0], dtype=np.float32),
-                         inv=0):
-    if not isinstance(scale, np.ndarray) and not isinstance(scale, list):
-        scale = np.array([scale, scale], dtype=np.float32)
-
-    scale_tmp = scale
-    src_w = scale_tmp[0]
-    dst_w = output_size[0]
-    dst_h = output_size[1]
-
-    rot_rad = np.pi * rot / 180
-    src_dir = get_dir([0, src_w * -0.5], rot_rad)
-    dst_dir = np.array([0, dst_w * -0.5], np.float32)
-
-    src = np.zeros((3, 2), dtype=np.float32)
-    dst = np.zeros((3, 2), dtype=np.float32)
-    src[0, :] = center + scale_tmp * shift
-    src[1, :] = center + src_dir + scale_tmp * shift
-    dst[0, :] = [dst_w * 0.5, dst_h * 0.5]
-    dst[1, :] = np.array([dst_w * 0.5, dst_h * 0.5], np.float32) + dst_dir
-
-    src[2:, :] = get_3rd_point(src[0, :], src[1, :])
-    dst[2:, :] = get_3rd_point(dst[0, :], dst[1, :])
-
-    if inv:
-        trans = cv2.getAffineTransform(np.float32(dst), np.float32(src))
-    else:
-        trans = cv2.getAffineTransform(np.float32(src), np.float32(dst))
-
-    return trans
 
 
 def add_coco_bbox(imgs, bbox, cat, conf=1, show_txt=True, img_id='default'): 

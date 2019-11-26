@@ -236,13 +236,13 @@ def main(opt):
 
     from models import get_pose_net
     heads = {"hm":20,"wh":2,"reg":2}
-    model = get_pose_net(18,heads, head_conv=64)
+    model = get_pose_net(50,heads, head_conv=64)
 #    model = load_model(model,"model_state.pth")
     model.cuda()
 
     criterion = CtdetLoss(opt)
    # optimizer = torch.optim.SGD(model.parameters(),lr=opt.lr, momentum = 0.9,weight_decay=1e-4)
-    optimizer = torch.optim.Adam(model.parameters(), opt.lr,weight_decay=1e-4)
+    optimizer = torch.optim.Adam(model.parameters(), opt.lr,weight_decay=1e-3)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(
         optimizer, milestones=opt.lr_step, gamma=0.1)
 
@@ -275,7 +275,7 @@ def main(opt):
             outdir = "./"
             model_path = os.path.join(outdir, opt.model_path)
             torch.save(state, model_path)
-
+        torch.save(state,"./last.pth")
    # if args.tensorboard:
    #     outpath = os.path.join(outdir, 'all_scalars.json')
    #     writer.export_scalars_to_json(outpath)

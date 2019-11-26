@@ -134,7 +134,7 @@ def detect_eval(image,model,num_classes,max_per_image):
     # images = images.to("cpu")
     for j in range(1, num_classes + 1):
         for bbox in results[j]:
-          if bbox[4] > 0.0001:
+          if bbox[4] > 0.0:
               detection_result.append([bbox[0],bbox[1],bbox[2],bbox[3],bbox[4],j-1])
     
     return detection_result
