@@ -6,7 +6,7 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import numpy as np
 num_classes = 20
-max_per_image = 200
+max_per_image = 100
 from eval_utils import load_model
 from models import get_pose_net
 import cv2
@@ -18,8 +18,8 @@ model = load_model(model,"ctdet_pascal_resdcn18_384.pth")
 model.eval()
 from collections import defaultdict
 from tqdm import tqdm
-# from testvoc import detect_eval
-from detect import detect_eval
+from testvoc import detect_eval
+# from detect import detect_eval
 
 
 VOC_CLASSES = (    # always index 0
@@ -149,15 +149,14 @@ def test_eval():
     target = {('image01','cat'):[[20,20,41,41]],('image01','dog'):[[60,60,91,91]],('image02','cat'):[[30,30,51,51]]}
     voc_eval(preds,target,VOC_CLASSES=['cat','dog'])
 
-# def test_model(image_path):
 
 if __name__ == '__main__':
-    #test_eval()
+    # test_eval()
     target =  defaultdict(list)
     preds = defaultdict(list)
     image_list = [] #image path list
 
-    f = open('F:/deeplearning/pytorch-YOLO-v1-master/voc2007test.txt')
+    f = open('./voc2007test.txt')
     lines = f.readlines()
     file_list = []
     for line in lines:
@@ -186,7 +185,7 @@ if __name__ == '__main__':
         root_path = "F:/deeplearning/pytorch-YOLO-v1-master/VOCtrainval_06-Nov-2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages"
         image_path_test = os.path.join(root_path,image_path)
         image = cv2.imread(image_path_test)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         detections = detect_eval(image,model,num_classes,max_per_image)
                 
         for x1,y1,x2,y2,prob,class_name in detections:

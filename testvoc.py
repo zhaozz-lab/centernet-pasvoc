@@ -203,17 +203,17 @@ def detect_eval(image,model,num_classes,max_per_image):
     for j in range(1, num_classes + 1):
         for bbox in results[j]:
           if bbox[4] > 0.0001:
-              detection_result.append([bbox[0],bbox[1],bbox[2],bbox[3],bbox[4],j-1])
+            detection_result.append([bbox[0],bbox[1],bbox[2],bbox[3],bbox[4],j-1])
     
     return detection_result    
 
 
-def detect(image):
+def detect(image,model,num_classes,max_per_image):
     images,meta = pre_process(image,1)
     images = images.to("cuda")
-    output,dets= process(images,return_time=True)
+    output,dets= process(images,model,return_time=True)
     detection_result = []
-    dets = post_process(dets,meta)
+    dets = post_process(dets,meta,num_classes,max_per_image)
     results = merge_outputs(dets,num_classes,max_per_image)
     images = images.to("cpu")
     image_detection = None
@@ -234,15 +234,15 @@ def detect(image):
 
 if __name__ == '__main__':
     num_classes = 20
-    max_per_image = 50
+    max_per_image = 100
 
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    # from models import get_pose_net
-    # heads = {"hm":num_classes,"wh":2,"reg":2}
-    # model = get_pose_net(18,heads, head_conv=256)
-    # model = load_model(model,"model_state1.pth")
-    # model.cuda()
-    # model.eval()
+    from models import get_pose_net
+    heads = {"hm":num_classes,"wh":2,"reg":2}
+    model = get_pose_net(18,heads, head_conv=64)
+    model = load_model(model,"./models/model_origin.pth")
+    model.cuda()
+    model.eval()
 
     # video = cv2.VideoCapture("t640480_det_results.avi")
     # # video = cv2.VideoCapture("MOT16-11.mp4")
@@ -261,13 +261,14 @@ if __name__ == '__main__':
     # print(detections)
     # cv2.imshow("test",image_result)
     # cv2.waitKey(0)
-    imagePath = "F:/deeplearning/pytorch-YOLO-v1-master/VOCtrainval_06-Nov-2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages"
+    # imagePath = "F:/deeplearning/pytorch-YOLO-v1-master/VOCtrainval_06-Nov-2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages"
+    
     files = os.listdir(imagePath)
     for file in files:
         filename = os.path.join(imagePath,file)
         image = cv2.imread(filename,1)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image_result,detections = detect(image)
+        image_result,detections = detect(image,model,num_classes,max_per_image)
         print(detections)
         if image_result is None:
             continue

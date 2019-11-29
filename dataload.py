@@ -306,13 +306,13 @@ if __name__ == '__main__':
     from torchvision import datasets, transforms
     import cv2
     # opt = opts().parse()
-    train_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_train.txt"
+    train_path = "C:/Users/7invensun/Downloads/Safety_helmet/train.txt"
     train_loader = torch.utils.data.DataLoader(
-        listDataset(train_path, shape=(384, 384),shuffle = True, 
+        hatDataset(train_path, shape=(384, 384),shuffle = True, 
          train=False,seen = 0,batch_size=1),  
     batch_size=1, 
     shuffle=True,
-    num_workers=1,
+    num_workers=0,
     pin_memory=True,  
     )
     for i,(image,label) in enumerate(train_loader):

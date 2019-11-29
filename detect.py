@@ -15,10 +15,7 @@ import numpy as np
 # from losses import CtdetLoss
 import cv2
 import torch.nn as nn
-from eval_utils import load_model,pre_process,process,post_process,merge_outputs
-
-num_classes = 80
-max_per_image = 100
+from eval_utils import load_model,pre_process,process,post_process,merge_outputs,add_coco_bbox
 
 
 coco_class_name = [
@@ -134,8 +131,8 @@ def detect_eval(image,model,num_classes,max_per_image):
     # images = images.to("cpu")
     for j in range(1, num_classes + 1):
         for bbox in results[j]:
-          if bbox[4] > 0.0:
-              detection_result.append([bbox[0],bbox[1],bbox[2],bbox[3],bbox[4],j-1])
+          # if bbox[4] > 0.3:
+            detection_result.append([bbox[0],bbox[1],bbox[2],bbox[3],bbox[4],j-1])
     
     return detection_result
 
@@ -148,37 +145,40 @@ def detect(image,model,num_classes):
     # print("the wh is {}".format(output["wh"]))
     dets = post_process(dets,meta,num_classes)
     results = merge_outputs(dets,num_classes,max_per_image)
-    images = images.to("cpu")
+
     for j in range(1, num_classes + 1):
         for bbox in results[j]:
           if bbox[4] > 0.3:
               image_detection = add_coco_bbox(image,bbox, bbox[4], conf=1, show_txt=True, img_id='default')
     cv2.imshow("detection",image_detection)
-    cv2.waitKey(0)
+    cv2.waitKey(1)
     return image_detection
 
 
 if __name__ == '__main__':
     # image = cv2.imread("./54.jpg")
+    num_classes = 80
+    max_per_image = 100
     from models import get_pose_net
     heads = {"hm":num_classes,"wh":2,"reg":2}
-    model = get_pose_net(34,heads, head_conv=256)    
-    model = load_model(model,"ctdet_coco_dla_2x.pth")
+    model = get_pose_net(18,heads, head_conv=64)    
+    # model = load_model(model,"ctdet_coco_dla_2x.pth")
+    model = load_model(model,"ctdet_pascal_resdcn18_384.pth")
     model.cuda()
     model.eval()
     video = cv2.VideoCapture("t640480_det_results.avi")
-
-
-    # Exit if video not opened.
-    if not video.isOpened():
-        print("Could not open video")
-        sys.exit()
-
-    # Read first frame.
-    ok, frame = video.read()
-    if not ok:
-        print('Cannot read video file')
-        sys.exit()
-    image_result = detect(frame,model,num_classes)
-    cv2.imshow("test",image_result)
-    cv2.waitKey(10)
+    
+    while True:
+        # Exit if video not opened.
+        if not video.isOpened():
+            print("Could not open video")
+            sys.exit()
+    
+        # Read first frame.
+        ok, frame = video.read()
+        if not ok:
+            print('Cannot read video file')
+            sys.exit()
+        image_result = detect(frame,model,num_classes)
+        # cv2.imshow("test",image_result)
+        # cv2.waitKey(10)

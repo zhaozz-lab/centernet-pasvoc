@@ -56,7 +56,7 @@ for xml_file in xml_files:
         # print(class_name)
         bbox = result['bbox']
         class_name = VOC_CLASSES.index(class_name)
-        txt_file.write(' '+str(bbox[0])+' '+str(bbox[1])+' '+str(bbox[2])+' '+str(bbox[3])+' '+str(class_name))
+        txt_file.write(' '+str(class_name)+' '+str(bbox[0])+' '+str(bbox[1])+' '+str(bbox[2])+' '+str(bbox[3]))
     txt_file.write('\n')
     #if count == 10:
     #    break

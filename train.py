@@ -144,9 +144,9 @@ def test(epoch, model, criterion, val_loader, config, writer):
     if config['tensorboard']:
         if epoch > 0:
             writer.add_scalar('Test/Loss', loss_meter.avg, epoch)
-            writer.add_scalar('Train/heatmaploss',loss_states['hm_loss'].mean()/image.size(0),epoch)
-            writer.add_scalar('Train/wh_loss',loss_states['wh_loss'].mean()/image.size(0),epoch)
-            writer.add_scalar('Train/off_loss',loss_states['off_loss'].mean()/image.size(0),epoch)
+            writer.add_scalar('Test/heatmaploss',loss_states['hm_loss'].mean()/image.size(0),epoch)
+            writer.add_scalar('Test/wh_loss',loss_states['wh_loss'].mean()/image.size(0),epoch)
+            writer.add_scalar('Test/off_loss',loss_states['off_loss'].mean()/image.size(0),epoch)
         writer.add_scalar('Test/Time', elapsed, epoch)
     return loss_meter.avg
 

@@ -280,8 +280,8 @@ def merge_outputs(detections,num_classes,max_per_image):
 
 def pre_process(image,scale, meta=None):
     height, width = image.shape[0:2]
-    # mean = np.array([[[0.408,0.447,0.47 ]]])
-    # std = np.array([[[0.289, 0.274,0.278]]])
+    new_width = width*scale
+    new_height = height*scale
     mean = np.array([0.485, 0.456, 0.406],
                    dtype=np.float32).reshape(1, 1, 3)
     std  = np.array([0.229, 0.224, 0.225],
@@ -289,28 +289,26 @@ def pre_process(image,scale, meta=None):
     c = np.array([width / 2., height / 2.], dtype=np.float32)
     s = max(width, height) * 1.0
 
-    new_width,new_height = 384,384
+    inp_width,inp_height = 384,384
 
-    trans_input = get_affine_transform(c, s, 0, [new_width, new_height])
-    # resized_image = cv2.resize(image, (width, height))
-    # print(trans_input)
+    trans_input = get_affine_transform(c, s, 0, [inp_width, inp_height])
+    resized_image = cv2.resize(image,(new_width,new_height))
+
     inp_image = cv2.warpAffine(
-      image, trans_input, (new_width, new_height),
+      resized_image, trans_input, (inp_width, inp_height),
       flags=cv2.INTER_LINEAR)
-    # cv2.imshow("inp_image",inp_image)
-    # cv2.waitKey(10)
     
     inp_image = (inp_image.astype(np.float32) / 255.)
-    inp = (inp - mean) / std
-    # images = inp_image.transpose(2, 0, 1).reshape(1, 3, new_width, new_height)
+    inp_image = (inp_image - mean) / std
+
     images = inp_image.transpose(2, 0, 1)
    
     images = images.astype(np.float32)
     images = torch.from_numpy(images)
     images = torch.unsqueeze(images,0)
     meta = {'c': c, 's': s,
-            'out_height': new_width // 4,
-            'out_width': new_height // 4}
+            'out_height': inp_width // 4,
+            'out_width': inp_height // 4}
     
     return images,meta
 
