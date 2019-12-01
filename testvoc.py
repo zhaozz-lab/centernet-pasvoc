@@ -202,7 +202,7 @@ def detect_eval(image,model,num_classes,max_per_image):
     # images = images.to("cpu")
     for j in range(1, num_classes + 1):
         for bbox in results[j]:
-          if bbox[4] > 0.0001:
+          if bbox[4] > 0.1:
             detection_result.append([bbox[0],bbox[1],bbox[2],bbox[3],bbox[4],j-1])
     
     return detection_result    
@@ -222,7 +222,7 @@ def detect(image,model,num_classes,max_per_image):
         for bbox in results[j]:
           # print("the bbox is {}".format(bbox))
           # print("the type of bbox is     ",type(bbox))
-          if bbox[4] > 0.3:
+          if bbox[4] > 0.01:
               detection_result.append([bbox[0],bbox[1],bbox[2],bbox[3],bbox[4],j])
               image_detection = add_coco_bbox(image,bbox, j-1, conf=1, show_txt=True, img_id='default')
           # else:
@@ -239,8 +239,9 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     from models import get_pose_net
     heads = {"hm":num_classes,"wh":2,"reg":2}
-    model = get_pose_net(18,heads, head_conv=64)
-    model = load_model(model,"./models/model_origin.pth")
+    model = get_pose_net(50,heads, head_conv=64)
+    # model = load_model(model,"./models/model_origin.pth")
+    model = load_model(model,"./model_origin.pth")
     model.cuda()
     model.eval()
 
@@ -261,7 +262,7 @@ if __name__ == '__main__':
     # print(detections)
     # cv2.imshow("test",image_result)
     # cv2.waitKey(0)
-    # imagePath = "F:/deeplearning/pytorch-YOLO-v1-master/VOCtrainval_06-Nov-2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages"
+    imagePath = "F:/deeplearning/pytorch-YOLO-v1-master/VOCtrainval_06-Nov-2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages"
     
     files = os.listdir(imagePath)
     for file in files:

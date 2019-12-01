@@ -13,13 +13,14 @@ import cv2
 heads = {"hm":num_classes,"wh":2,"reg":2}
 model = get_pose_net(18,heads, head_conv=64)
 # model = load_model(model,"./models/model_origin.pth")
-model = load_model(model,"ctdet_pascal_resdcn18_384.pth")
+# model = load_model(model,"ctdet_pascal_resdcn18_384.pth")
+model = load_model(model,"./model_origin.pth")
 # model.cuda()
 model.eval()
 from collections import defaultdict
 from tqdm import tqdm
-from testvoc import detect_eval
-# from detect import detect_eval
+# from testvoc import detect_eval
+from detect import detect_eval
 
 
 VOC_CLASSES = (    # always index 0
