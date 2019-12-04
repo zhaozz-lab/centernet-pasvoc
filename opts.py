@@ -11,18 +11,6 @@ class opts(object):
   def __init__(self):
     self.parser = argparse.ArgumentParser()
     # basic experiment setting
-    self.parser.add_argument('--task', default='ctdet',
-                             help='ctdet | ddd | multi_pose | exdet')
-    self.parser.add_argument('--dataset', default='coco',
-                             help='coco | kitti | coco_hp | pascal')
-    self.parser.add_argument('--exp_id', default='default')
-    self.parser.add_argument('--test', action='store_true')
-    self.parser.add_argument('--debug', type=int, default=0,
-                             help='level of visualization.'
-                                  '1: only show the final detection results'
-                                  '2: show the network output features'
-                                  '3: use matplot to display' # useful when lunching training with ipython notebook
-                                  '4: save all visualizations to disk')
     self.parser.add_argument('--demo', default='', 
                              help='path to image/ image folders/ video. '
                                   'or "webcam"')
@@ -43,20 +31,6 @@ class opts(object):
                              help='disable when the input size is not fixed.')
     self.parser.add_argument('--seed', type=int, default=317, 
                              help='random seed') # from CornerNet
-
-    # log
-    self.parser.add_argument('--print_iter', type=int, default=0, 
-                             help='disable progress bar and print to screen.')
-    self.parser.add_argument('--hide_data_time', action='store_true',
-                             help='not display time during training.')
-    self.parser.add_argument('--save_all', action='store_true',
-                             help='save model to disk every 5 epochs.')
-    self.parser.add_argument('--metric', default='loss', 
-                             help='main metric to save best model')
-    self.parser.add_argument('--vis_thresh', type=float, default=0.3,
-                             help='visualization threshold.')
-    self.parser.add_argument('--debugger_theme', default='white', 
-                             choices=['white', 'black'])
     
     # model
     self.parser.add_argument('--arch', default='dla_34', 
@@ -255,29 +229,9 @@ class opts(object):
       if opt.trainval:
           opt.val_intervals = 100000000  
 
-      if opt.debug > 0:
-          opt.num_workers = 0
-          opt.batch_size = 1
-          opt.gpus = [opt.gpus[0]]
-          opt.master_batch_size = -1  
-
       if opt.master_batch_size == -1:
           opt.master_batch_size = opt.batch_size // len(opt.gpus)
-      # rest_batch_size = (opt.batch_size - opt.master_batch_size)
-      # opt.chunk_sizes = [opt.master_batch_size]
-      # for i in range(len(opt.gpus) - 1):
-      #     slave_chunk_size = rest_batch_size // (len(opt.gpus) - 1)
-      #     if i < rest_batch_size % (len(opt.gpus) - 1):
-      #         slave_chunk_size += 1
-      #     opt.chunk_sizes.append(slave_chunk_size)
-      # print('training chunk_sizes:', opt.chunk_sizes)  
 
-      # opt.root_dir = os.path.join(os.path.dirname(__file__), '..', '..')
-      # opt.data_dir = os.path.join(opt.root_dir, 'data')
-      # opt.exp_dir = os.path.join(opt.root_dir, 'exp', opt.task)
-      # opt.save_dir = os.path.join(opt.exp_dir, opt.exp_id)
-      # opt.debug_dir = os.path.join(opt.save_dir, 'debug')
-      # print('The output will be saved to ', opt.save_dir)
       
       if opt.resume and opt.load_model == '':
           model_path = opt.save_dir[:-4] if opt.save_dir.endswith('TEST') \

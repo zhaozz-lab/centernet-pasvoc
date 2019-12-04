@@ -48,27 +48,7 @@ color_list = np.array(
     ).astype(np.float32)
 color_list = color_list.reshape((-1, 3)) * 255
 
-
-def resize_post_process(dets,meta,num_classes,max_per_image):
-  # dets: batch x max_dets x dim
-  # return 1-based class det dict
-  ret = []
-  for i in range(dets.shape[0]):
-    top_preds = {}
-    dets[i, :, 0] = dets[i, :, 0]/meta["c"]
-    dets[i, :, 1] = dets[i, :, 1]/meta["s"]
-    dets[i, :, 2] = dets[i, :, 2]/meta["c"]
-    dets[i, :, 3] = dets[i, :, 3]/meta["s"]
-    classes = dets[i, :, -1]
-    for j in range(num_classes):
-      inds = (classes == j)
-      top_preds[j + 1] = np.concatenate([
-        dets[i, inds, :4].astype(np.float32),
-        dets[i, inds, 4:5].astype(np.float32)], axis=1).tolist()
-    ret.append(top_preds)
-  return ret  
-
-
+  
 def pre_process(image,scale, meta=None):
     height, width = image.shape[0:2]
     mean = np.array([[[0.408,0.447,0.47 ]]])

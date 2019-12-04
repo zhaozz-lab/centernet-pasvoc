@@ -11,111 +11,8 @@ import time
 import torchvision
 from torchvision import datasets, transforms
 import numpy as np
-# from losses import CtdetLoss
 import cv2
 import torch.nn as nn
-
-coco_class_name = [
-     'person', 'bicycle', 'car', 'motorcycle', 'airplane',
-     'bus', 'train', 'truck', 'boat', 'traffic light', 'fire hydrant',
-     'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse',
-     'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'backpack',
-     'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis',
-     'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove',
-     'skateboard', 'surfboard', 'tennis racket', 'bottle', 'wine glass',
-     'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple', 'sandwich',
-     'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake',
-     'chair', 'couch', 'potted plant', 'bed', 'dining table', 'toilet', 'tv',
-     'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave',
-     'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase',
-     'scissors', 'teddy bear', 'hair drier', 'toothbrush'
-]
-
-color_list = np.array(
-        [
-            1.000, 1.000, 1.000,
-            0.850, 0.325, 0.098,
-            0.929, 0.694, 0.125,
-            0.494, 0.184, 0.556,
-            0.466, 0.674, 0.188,
-            0.301, 0.745, 0.933,
-            0.635, 0.078, 0.184,
-            0.300, 0.300, 0.300,
-            0.600, 0.600, 0.600,
-            1.000, 0.000, 0.000,
-            1.000, 0.500, 0.000,
-            0.749, 0.749, 0.000,
-            0.000, 1.000, 0.000,
-            0.000, 0.000, 1.000,
-            0.667, 0.000, 1.000,
-            0.333, 0.333, 0.000,
-            0.333, 0.667, 0.000,
-            0.333, 1.000, 0.000,
-            0.667, 0.333, 0.000,
-            0.667, 0.667, 0.000,
-            0.667, 1.000, 0.000,
-            1.000, 0.333, 0.000,
-            1.000, 0.667, 0.000,
-            1.000, 1.000, 0.000,
-            0.000, 0.333, 0.500,
-            0.000, 0.667, 0.500,
-            0.000, 1.000, 0.500,
-            0.333, 0.000, 0.500,
-            0.333, 0.333, 0.500,
-            0.333, 0.667, 0.500,
-            0.333, 1.000, 0.500,
-            0.667, 0.000, 0.500,
-            0.667, 0.333, 0.500,
-            0.667, 0.667, 0.500,
-            0.667, 1.000, 0.500,
-            1.000, 0.000, 0.500,
-            1.000, 0.333, 0.500,
-            1.000, 0.667, 0.500,
-            1.000, 1.000, 0.500,
-            0.000, 0.333, 1.000,
-            0.000, 0.667, 1.000,
-            0.000, 1.000, 1.000,
-            0.333, 0.000, 1.000,
-            0.333, 0.333, 1.000,
-            0.333, 0.667, 1.000,
-            0.333, 1.000, 1.000,
-            0.667, 0.000, 1.000,
-            0.667, 0.333, 1.000,
-            0.667, 0.667, 1.000,
-            0.667, 1.000, 1.000,
-            1.000, 0.000, 1.000,
-            1.000, 0.333, 1.000,
-            1.000, 0.667, 1.000,
-            0.167, 0.000, 0.000,
-            0.333, 0.000, 0.000,
-            0.500, 0.000, 0.000,
-            0.667, 0.000, 0.000,
-            0.833, 0.000, 0.000,
-            1.000, 0.000, 0.000,
-            0.000, 0.167, 0.000,
-            0.000, 0.333, 0.000,
-            0.000, 0.500, 0.000,
-            0.000, 0.667, 0.000,
-            0.000, 0.833, 0.000,
-            0.000, 1.000, 0.000,
-            0.000, 0.000, 0.167,
-            0.000, 0.000, 0.333,
-            0.000, 0.000, 0.500,
-            0.000, 0.000, 0.667,
-            0.000, 0.000, 0.833,
-            0.000, 0.000, 1.000,
-            0.000, 0.000, 0.000,
-            0.143, 0.143, 0.143,
-            0.286, 0.286, 0.286,
-            0.429, 0.429, 0.429,
-            0.571, 0.571, 0.571,
-            0.714, 0.714, 0.714,
-            0.857, 0.857, 0.857,
-            0.000, 0.447, 0.741,
-            0.50, 0.5, 0
-        ]
-    ).astype(np.float32)
-color_list = color_list.reshape((-1, 3)) * 255
 
 
 def load_model(model, model_path, optimizer=None, resume=False, 
@@ -226,7 +123,6 @@ def transform_preds(coords, center, scale, output_size):
     return target_coords
 
 
-
 def _nms(heat, kernel=3):
     pad = (kernel - 1) // 2
 
@@ -234,6 +130,7 @@ def _nms(heat, kernel=3):
         heat, (kernel, kernel), stride=1, padding=pad)
     keep = (hmax == heat).float()
     return heat * keep
+
 
 def _tranpose_and_gather_feat(feat, ind):
     feat = feat.permute(0, 2, 3, 1).contiguous()
@@ -410,6 +307,7 @@ def get_dir(src_point, rot_rad):
 
     return src_result
 
+
 def get_3rd_point(a, b):
     direct = a - b
     return b + np.array([-direct[1], direct[0]], dtype=np.float32)
@@ -418,7 +316,6 @@ def get_3rd_point(a, b):
 def add_coco_bbox(imgs, bbox, cat, conf=1, show_txt=True, img_id='default'): 
     bbox = np.array(bbox, dtype=np.int32)
     cat = int(cat)
-    # print(color_list[0])
     c = color_list[cat].tolist()
     # if theme == 'white':
     #   c = (255 - np.array(c)).tolist()
@@ -441,13 +338,11 @@ def detect(image):
     
     images = images.to("cuda")
     output,dets= process(images,return_time=True)
-    # print("the wh is {}".format(output["wh"]))
     dets = post_process(dets,meta)
     results = merge_outputs(dets)
     images = images.to("cpu")
     for j in range(1, num_classes + 1):
         for bbox in results[j]:
-          # print("the bbox is {}".format(bbox))
           if bbox[4] > 0.3:
               image_detection = add_coco_bbox(image,bbox, bbox[4], conf=1, show_txt=True, img_id='default')
     # image_result = cv2.resize(image_detection,(image.shape[1],image.shape[0]))
@@ -457,9 +352,7 @@ def detect(image):
 
 
 if __name__ == '__main__':
-    # image = cv2.imread("./54.jpg")
     video = cv2.VideoCapture("t640480_det_results.avi")
-
 
     # Exit if video not opened.
     if not video.isOpened():

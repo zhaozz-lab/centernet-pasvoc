@@ -194,7 +194,7 @@ def load_model(model, model_path, optimizer=None, resume=False,
 
 def main(opt):
     torch.manual_seed(opt.seed)
-    torch.backends.cudnn.benchmark = not opt.not_cuda_benchmark and not opt.test
+    torch.backends.cudnn.benchmark = True
     # train_path = "../VOC/train.txt"
     # val_path = "../VOC/val.txt"
     train_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_train.txt"

@@ -2,7 +2,7 @@
 # encoding: utf-8
 import torch
 from torch.utils.data import Dataset
-from utils import read_truths_args
+# from utils import read_truths_args
 import random
 import os
 from PIL import Image
