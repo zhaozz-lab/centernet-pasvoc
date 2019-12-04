@@ -75,7 +75,6 @@ def train(epoch, model, optimizer, criterion, train_loader, config, writer):
         optimizer.step()
         num = image.size(0)
         loss_meter.update(loss.item(), num)
-        # print("the loss is {}".format(loss_states))
 
         if config['tensorboard']:
             writer.add_scalar('Train/RunningLoss', loss_meter.val, global_step)
@@ -152,9 +151,6 @@ def test(epoch, model, criterion, val_loader, config, writer):
         writer.add_scalar('Test/Time', elapsed, epoch)
     return loss_meter.avg
 
-    # if config['tensorboard_parameters']:
-    #     for name, param in model.named_parameters():
-    #         writer.add_histogram(name, param, global_step)
 
 def load_model(model, model_path, optimizer=None, resume=False, 
                lr=None, lr_step=None):
@@ -199,21 +195,21 @@ def load_model(model, model_path, optimizer=None, resume=False,
 def main(opt):
     torch.manual_seed(opt.seed)
     torch.backends.cudnn.benchmark = not opt.not_cuda_benchmark and not opt.test
-    train_path = "../VOC/train.txt"
-    val_path = "../VOC/val.txt"
-    # train_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_train.txt"
-    # val_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_val.txt"
+    # train_path = "../VOC/train.txt"
+    # val_path = "../VOC/val.txt"
+    train_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_train.txt"
+    val_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_val.txt"
     # optimizer = torch.optim.Adam(model.parameters(), opt.lr)
     start_epoch = 0
     # print('Setting up data...')
-    batchsize = 32 
+    batchsize = 1 
     imageshape=(384,384)
     val_loader = torch.utils.data.DataLoader(
             listDataset(val_path, shape=imageshape,shuffle = False, 
-            train=False,seen = 0,batch_size=batchsize), 
+            train=False), 
         
         shuffle=False,
-        num_workers=8,
+        num_workers=0,
         pin_memory=True,
         batch_size=batchsize, 
     ) 
@@ -221,10 +217,10 @@ def main(opt):
 
     train_loader = torch.utils.data.DataLoader(
             listDataset(train_path, shape=imageshape,shuffle = True, 
-            train=True,seen = 0,batch_size=batchsize),  
+            train=True),  
         batch_size=batchsize, 
         shuffle=True,
-        num_workers=8,
+        num_workers=0,
         pin_memory=True,  
     )  
     print("the train_loader size is {}".format(len(train_loader)))
@@ -278,9 +274,7 @@ def main(opt):
             model_path = os.path.join(outdir, opt.model_path)
             torch.save(state, model_path)
         torch.save(state,"./last.pth")
-   # if args.tensorboard:
-   #     outpath = os.path.join(outdir, 'all_scalars.json')
-   #     writer.export_scalars_to_json(outpath)
+
 
       
 if __name__ == '__main__':

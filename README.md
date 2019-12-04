@@ -18,13 +18,19 @@ could generate the *.txt like
    2007_train.txt  
    2007_val.txt  
    2012_train.txt  
-   2012_val.txt  
+   2012_val.txt 
+```sh
+cat 2007_train.txt 2012_train.txt 2012_val.txt 2007_val.txt>train.txt
 ```
-cat 2007_train.txt 2012_train.txt >train.txt 
+
 ```
-```
-cat 2007_val.txt 2012_val.txt >val.txt 
+cat 2007_test.txt >val.txt 
 ```
 
 ## train
-the train is in the 
+train code is in the experiments
+```sh
+sh pasvoc_384_origin.sh
+```
+using the resnet18dcn the mAP is 0.69
+using the resnet50dcn the mAP is 0.73

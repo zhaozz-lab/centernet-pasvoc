@@ -2,7 +2,6 @@
 # encoding: utf-8
 import torch
 from torch.utils.data import Dataset
-from utils import read_truths_args
 import random
 import os
 from PIL import Image
@@ -14,21 +13,23 @@ import cv2
 
 Debug = False 
 
-classes = ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow", "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
+classes = ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car",
+           "cat", "chair", "cow", "diningtable", "dog", "horse", "motorbike", 
+           "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
+
+
 def gaussian2D(shape, sigma=1):
     m, n = [(ss - 1.) / 2. for ss in shape]
     y, x = np.ogrid[-m:m+1,-n:n+1]
-
     h = np.exp(-(x * x + y * y) / (2 * sigma * sigma))
     h[h < np.finfo(h.dtype).eps * h.max()] = 0
     return h
 
+
 def draw_umich_gaussian(heatmap, center, radius, k=1):
     diameter = 2 * radius + 1
-    gaussian = gaussian2D((diameter, diameter), sigma=diameter / 6)
-    
+    gaussian = gaussian2D((diameter, diameter), sigma=diameter / 6)    
     x, y = int(center[0]), int(center[1])  
-
     height, width = heatmap.shape[0:2]
       
     left, right = min(x, radius), min(width - x, radius + 1)
@@ -40,78 +41,6 @@ def draw_umich_gaussian(heatmap, center, radius, k=1):
         np.maximum(masked_heatmap, masked_gaussian * k, out=masked_heatmap)
     return heatmap
 
-
-def scale_image_channel(im, c, v):
-    cs = list(im.split())
-    cs[c] = cs[c].point(lambda i: i * v)
-    out = Image.merge(im.mode, tuple(cs))
-    return out
-
-def distort_image(im, hue, sat, val):
-    im = im.convert('HSV')
-    cs = list(im.split())
-    cs[1] = cs[1].point(lambda i: i * sat)
-    cs[2] = cs[2].point(lambda i: i * val)
-    
-    def change_hue(x):
-        x += hue*255
-        if x > 255:
-            x -= 255
-        if x < 0:
-            x += 255
-        return x
-    cs[0] = cs[0].point(change_hue)
-    im = Image.merge(im.mode, tuple(cs))
-
-    im = im.convert('RGB')
-    #constrain_image(im)
-    return im
-
-def rand_scale(s):
-    scale = random.uniform(1, s)
-    if(random.randint(1,10000)%2): 
-        return scale
-    return 1./scale
-
-def random_distort_image(im, hue, saturation, exposure):
-    dhue = random.uniform(-hue, hue)
-    dsat = rand_scale(saturation)
-    dexp = rand_scale(exposure)
-    res = distort_image(im, dhue, dsat, dexp)
-    return res
-
-def data_augmentation(img, shape, jitter, hue, saturation, exposure):
-    oh = img.height  
-    ow = img.width
-    
-    dw =int(ow*jitter)
-    dh =int(oh*jitter)
-
-    pleft  = random.randint(-dw, dw)
-    pright = random.randint(-dw, dw)
-    ptop   = random.randint(-dh, dh)
-    pbot   = random.randint(-dh, dh)
-
-    swidth =  ow - pleft - pright
-    sheight = oh - ptop - pbot
-
-    sx = float(swidth)  / ow
-    sy = float(sheight) / oh
-    
-    flip = random.randint(1,10000)%2
-    cropped = img.crop( (pleft, ptop, pleft + swidth - 1, ptop + sheight - 1))
-
-    dx = (float(pleft)/ow)/sx
-    dy = (float(ptop) /oh)/sy
-    
-    sized = cropped.resize(shape)
-
-    if flip: 
-        sized = sized.transpose(Image.FLIP_LEFT_RIGHT)
-    img = random_distort_image(sized, hue, saturation, exposure)
-    
-    return img, flip, dx,dy,sx,sy 
-    
 
 def load_label(label_path):
     tree=ET.parse(label_path)
@@ -134,15 +63,10 @@ def load_label(label_path):
 
 def load_data_detection(imgpath, shape):
     label_path = imgpath.replace('images', 'labels').replace('JPEGImages', 'Annotations').replace('.jpg', '.xml').replace('.png','.xml')
-    
-    
     img = cv2.imread(imgpath)
-    # img = Image.open(imgpath).convert('RGB')
     label = load_label(label_path)
-    # img,flip,dx,dy,sx,sy = data_augmentation(img, shape, jitter, hue, saturation, exposure)
-    # label = fill_truth_detection(labpath, img.width, img.height, flip, dx, dy, 1./sx, 1./sy)
-    
     return img,label
+
 
 def gaussian_radius(det_size, min_overlap=0.7):
     height, width = det_size
@@ -167,7 +91,7 @@ def gaussian_radius(det_size, min_overlap=0.7):
 
 
 class listDataset(Dataset):
-    def __init__(self, root, shape=None, shuffle=True, transform=None, target_transform=None, train=False, seen=0, batch_size=64, num_workers=4):
+    def __init__(self, root, shape=None, shuffle=True, train=False):
        with open(root, 'r') as file:
            self.lines = file.readlines()
 
@@ -175,20 +99,13 @@ class listDataset(Dataset):
            random.shuffle(self.lines)
 
        self.nSamples  = len(self.lines)
-       self.transform = transform
-       self.target_transform = target_transform
        self.train = train
        self.shape = shape
-       self.seen = seen
-       self.batch_size = batch_size
-       self.num_workers = num_workers
        self.num_classes = 20
        self.max_objs = 100
        self.not_rand_crop = False
        self.flip = True
        self.no_color_aug = False
-       self._valid_ids = np.arange(1, 21, dtype=np.int32)
-       self.cat_ids = {v: i for i, v in enumerate(self._valid_ids)}
        self._data_rng = np.random.RandomState(123)
        self._eig_val = np.array([0.2141788, 0.01817699, 0.00341571],
                              dtype=np.float32)
@@ -196,7 +113,12 @@ class listDataset(Dataset):
         [-0.58752847, -0.69563484, 0.41340352],
         [-0.5832747, 0.00994535, -0.81221408],
         [-0.56089297, 0.71832671, 0.41158938]
-    ], dtype=np.float32)
+          ], dtype=np.float32)
+
+       self.mean = np.array([0.485, 0.456, 0.406],
+            dtype=np.float32).reshape(1, 1, 3)
+       self.std  = np.array([0.229, 0.224, 0.225],
+                   dtype=np.float32).reshape(1, 1, 3)
 
     def __len__(self):
         return self.nSamples
@@ -233,12 +155,11 @@ class listDataset(Dataset):
                 img = img[:, ::-1, :]
                 c[0] =  width - c[0] - 1
         
-        import cv2
         trans_input = get_affine_transform(c, s, 0, [input_w, input_h])
         inp = cv2.warpAffine(img, trans_input, 
                          (input_w, input_h),
                          flags=cv2.INTER_LINEAR)
-            # test_img = img.copy()    
+            
         inp = (inp.astype(np.float32) / 255.)
         if self.train and not self.no_color_aug:
             color_aug(self._data_rng, inp, self._eig_val, self._eig_vec)
@@ -247,13 +168,8 @@ class listDataset(Dataset):
         output_w = input_w // 4
  
         trans_output = get_affine_transform(c, s, 0, [output_w, output_h])
-        
-        mean = np.array([0.485, 0.456, 0.406],
-                   dtype=np.float32).reshape(1, 1, 3)
-        std  = np.array([0.229, 0.224, 0.225],
-                   dtype=np.float32).reshape(1, 1, 3)
         img = np.array(inp)
-        img = ((img - mean) / std).astype(np.float32)
+        img = ((img - self.mean) / self.std).astype(np.float32)
 
         img = img.transpose(2, 0, 1)
         img = img.astype(np.float32)
@@ -263,8 +179,7 @@ class listDataset(Dataset):
         reg = np.zeros((self.max_objs, 2), dtype=np.float32)
         ind = np.zeros((self.max_objs), dtype=np.int64)
         reg_mask = np.zeros((self.max_objs), dtype=np.uint8)        
-        output_w = self.shape[1]//4
-        output_h = self.shape[0]//4
+
 
         label = np.array(label)
         for k in range(label.shape[0]):
@@ -279,10 +194,10 @@ class listDataset(Dataset):
             bbox[[0, 2]] = np.clip(bbox[[0, 2]], 0, output_w - 1)
             bbox[[1, 3]] = np.clip(bbox[[1, 3]], 0, output_h - 1)
             h, w = bbox[3] - bbox[1], bbox[2] - bbox[0]
+            
             if h > 0 and w > 0:
                 radius = gaussian_radius((math.ceil(h), math.ceil(w)))
                 radius = max(0, int(radius))
-               #  radius = self.opt.hm_gauss if self.opt.mse_loss else radius
                 ct = np.array(
                  [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2], dtype=np.float32)
                 ct_int = ct.astype(np.int32)
@@ -292,22 +207,8 @@ class listDataset(Dataset):
                 reg[k] = ct - ct_int
                 reg_mask[k] = 1
 
-        
-        # ret = {'input': inp, 'hm': hm, 'reg_mask': reg_mask, 'ind': ind, 'wh': wh}
         ret = {'hm': hm, 'reg_mask': reg_mask, 'ind': ind, 'wh': wh, "reg":reg}       
         if Debug:
-            # test_img = img
-            print(test_img.shape)
-            import cv2
-            # print(test_img.shape)
-            # test_img = test_img.transpose(1, 2, 0)
-            # test_img = (test_img * std + mean)
-            print("the label")
-            # print(label[0,1])
-            # print(int(test_img.shape[0]/4))
-
-            
-            # test_img = cv2.resize(test_img,(96,96))
             testlabel = np.array(testlabel)
             cv2.rectangle(test_img,(int(testlabel[0,1]),int(testlabel[0,2])),(int(testlabel[0,3]),int(testlabel[0,4])),(255, 0, 0), 2)
             cv2.imshow("heatmap",hm[int(label[0,0])])
@@ -320,26 +221,12 @@ class listDataset(Dataset):
 
 
 if __name__ == '__main__':
-    # t = torch.tensor([[[1,2],[3,4],[3,4]]])
-    # print(t)
-    # print(t.shape)
-    # # t0 = torch.gather(t, 0, torch.tensor([[[1,0],[1,1]]]))
-    # # print(t0)
-
-    # t1 = torch.gather(t, 1, torch.tensor([[[1,0],[1,1]]]))
-    # print(t1)
-
-
-    # t2 = torch.gather(t, 2, torch.tensor([[[1,0],[1,1]]]))
-    # print(t2)
-
     from torchvision import datasets, transforms
     import cv2
-    # opt = opts().parse()
     train_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_train.txt"
     train_loader = torch.utils.data.DataLoader(
         listDataset(train_path, shape=(384, 384),shuffle = True, 
-         train=True,seen = 0,batch_size=1),  
+         train=True),  
     batch_size=1, 
     shuffle=True,
     num_workers=0,
