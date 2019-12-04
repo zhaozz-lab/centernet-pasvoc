@@ -238,6 +238,8 @@ class listDataset(Dataset):
             elif tsz > 0:
                 label[0:tsz] = tmp
 
+       # mean = np.array([[[0.408,0.447,0.47 ]]])
+       # std = np.array([[[0.289, 0.274,0.278]]])
         mean = np.array([0.485, 0.456, 0.406],
                    dtype=np.float32).reshape(1, 1, 3)
         std  = np.array([0.229, 0.224, 0.225],
@@ -246,7 +248,8 @@ class listDataset(Dataset):
         img = ((img / 255. - mean) / std).astype(np.float32)
         img = img.transpose(2, 0, 1)
         img = img.astype(np.float32)
-
+        # img = torch.from_numpy(img)
+        # print("the shape is {}".format(img.shape))
         label = label.view(-1,5)
        # print(label)
         hm = np.zeros((self.num_classes, int(self.shape[0]/4),int(self.shape[1]/4)), dtype=np.float32)

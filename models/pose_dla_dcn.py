@@ -13,7 +13,7 @@ from torch import nn
 import torch.nn.functional as F
 import torch.utils.model_zoo as model_zoo
 
-from .DCNv2.dcn_v2 import DCN
+from DCNv2.dcn_v2 import DCN
 
 BN_MOMENTUM = 0.1
 logger = logging.getLogger(__name__)
@@ -490,4 +490,14 @@ def get_pose_net(num_layers, heads, head_conv=256, down_ratio=4):
                  last_level=5,
                  head_conv=head_conv)
   return model
-
+if __name__ == '__main__':
+    heads = {"hm":20,"wh":2,"reg":2}
+    model = get_pose_net(34,heads)
+    model = model.cuda()
+   
+    input = torch.ones((1,3,224,224))
+    input = input.cuda()
+    output = model(input)
+    print(output[0]['hm'].shape)
+    print(output[0]['wh'].shape)
+    print(output[0]['reg'].shape)
