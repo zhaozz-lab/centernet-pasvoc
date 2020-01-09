@@ -2,6 +2,8 @@
 one stage object detection include yolov1 yolov2 yolov3 object as point
 reference https://github.com/xingyizhou/CenterNet
 
+
+## the code need to complile the DCNv2，this code is compliled in windows 10,VS2015 python3.6
 ## the file directory is:
 
 
