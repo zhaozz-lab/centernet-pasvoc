@@ -197,12 +197,9 @@ def main(opt):
     torch.backends.cudnn.benchmark = True
     train_path = "../VOC/train.txt"
     val_path = "../VOC/val.txt"
-   # train_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_train.txt"
-   # val_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_val.txt"
     # optimizer = torch.optim.Adam(model.parameters(), opt.lr)
     start_epoch = 0
     # print('Setting up data...')
-    batchsize = 1 
     imageshape=(384,384)
     val_loader = torch.utils.data.DataLoader(
             listDataset(val_path, shape=imageshape,shuffle = False, 
@@ -211,14 +208,14 @@ def main(opt):
         shuffle=False,
         num_workers=0,
         pin_memory=True,
-        batch_size=batchsize, 
+        batch_size=opt.batch_size, 
     ) 
 
 
     train_loader = torch.utils.data.DataLoader(
             listDataset(train_path, shape=imageshape,shuffle = True, 
             train=True),  
-        batch_size=batchsize, 
+        batch_size=opt.batch_size, 
         shuffle=True,
         num_workers=0,
         pin_memory=True,  
@@ -280,3 +277,4 @@ def main(opt):
 if __name__ == '__main__':
     opt = opts().parse()
     main(opt)
+
