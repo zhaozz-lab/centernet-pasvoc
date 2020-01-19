@@ -195,10 +195,10 @@ def load_model(model, model_path, optimizer=None, resume=False,
 def main(opt):
     torch.manual_seed(opt.seed)
     torch.backends.cudnn.benchmark = True
-    # train_path = "../VOC/train.txt"
-    # val_path = "../VOC/val.txt"
-    train_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_train.txt"
-    val_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_val.txt"
+    train_path = "../VOC/train.txt"
+    val_path = "../VOC/val.txt"
+   # train_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_train.txt"
+   # val_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_val.txt"
     # optimizer = torch.optim.Adam(model.parameters(), opt.lr)
     start_epoch = 0
     # print('Setting up data...')
@@ -234,7 +234,7 @@ def main(opt):
 
     from models import get_pose_net
     heads = {"hm":20,"wh":2,"reg":2}
-    model = get_pose_net(50,heads, head_conv=64)
+    model = get_pose_net(18,heads, head_conv=64)
 #    model = load_model(model,"model_state.pth")
     model.cuda()
 

@@ -11,11 +11,12 @@ from eval_utils import load_model
 from models import get_pose_net
 import cv2
 heads = {"hm":num_classes,"wh":2,"reg":2}
-model = get_pose_net(50,heads, head_conv=64)
+model = get_pose_net(18,heads, head_conv=64)
 # model = load_model(model,"./models/model_origin.pth")
 # model = load_model(model,"ctdet_pascal_resdcn18_384.pth")
-# model = load_model(model,"./model_origin.pth")
-model = load_model(model,"./resnet50dcn.pth")
+#model = load_model(model,"./model_origin.pth")
+model = load_model(model,"./last.pth")
+#model = load_model(model,"./resnet50dcn.pth")
 # model = load_model(model,"./resnet50last.pth")
 # model.cuda()
 model.eval()
@@ -170,7 +171,7 @@ if __name__ == '__main__':
     print('---prepare target---')
     for index,image_file in enumerate(file_list):
         image_id = image_file[0]
-
+        
         image_list.append(image_id)
         num_obj = (len(image_file) - 1) // 5
         for i in range(num_obj):
@@ -181,11 +182,11 @@ if __name__ == '__main__':
             c = int(image_file[5+5*i])
             class_name = VOC_CLASSES[c]
             target[(image_id,class_name)].append([x1,y1,x2,y2])
-    # print(target)
+    print(target)
     model = model.cuda()
     count = 0
     for image_path in tqdm(image_list):
-        root_path = "F:/deeplearning/pytorch-YOLO-v1-master/VOCtrainval_06-Nov-2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages"
+        root_path = "/mnt/VOC/VOCdevkit/VOC2007/JPEGImages"
         image_path_test = os.path.join(root_path,image_path)
         image = cv2.imread(image_path_test)
         # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -194,5 +195,6 @@ if __name__ == '__main__':
         for x1,y1,x2,y2,prob,class_name in detections:
             preds[VOC_CLASSES[class_name]].append([image_path,prob,x1,y1,x2,y2])
 
+    print("the preds is ",preds)
     print('---start evaluate---')
     voc_eval(preds,target,VOC_CLASSES=VOC_CLASSES)

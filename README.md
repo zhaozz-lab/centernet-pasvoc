@@ -2,8 +2,18 @@
 one stage object detection include yolov1 yolov2 yolov3 object as point
 reference https://github.com/xingyizhou/CenterNet
 
-
-## the code need to complile the DCNv2，this code is compliled in windows 10,VS2015 python3.6
+## the simple train method which not contain DCN
+* modify the code in the models __init__.py 
+```python
+# from .dlav0 import get_pose_net
+#from .resnet_dcn import get_pose_net
+# from .pose_dla_dcn import get_pose_net
+from .msra_resnet import get_pose_net
+__all__=(
+'get_pose_net', 
+```
+##
+ the code need to complile the DCNv2，this code is compliled in windows 10,VS2015 python3.6
 ## the file directory is:
 
 
