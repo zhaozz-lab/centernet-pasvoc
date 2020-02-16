@@ -12,7 +12,6 @@ import time
 import torchvision
 from torchvision import datasets, transforms
 import numpy as np
-# from losses import CtdetLoss
 import cv2
 import torch.nn as nn
 from eval_utils import load_model,pre_process,process,post_process,merge_outputs,add_coco_bbox

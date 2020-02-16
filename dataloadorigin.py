@@ -223,7 +223,7 @@ class listDataset(Dataset):
 if __name__ == '__main__':
     from torchvision import datasets, transforms
     import cv2
-    train_path = "E:/GazeStudy/pytorch-yolo2-master/data/VOCtrainval_06-Nov-2007/2007_train.txt"
+    train_path = "./VOC/train.txt"
     train_loader = torch.utils.data.DataLoader(
         listDataset(train_path, shape=(384, 384),shuffle = True, 
          train=True),  

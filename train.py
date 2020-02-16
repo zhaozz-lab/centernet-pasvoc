@@ -3,7 +3,6 @@ from __future__ import division
 from __future__ import print_function
 from tensorboardX import SummaryWriter
 import os
-#from dataload import listDataset
 
 from dataloadorigin import listDataset
 import torch
@@ -152,54 +151,14 @@ def test(epoch, model, criterion, val_loader, config, writer):
     return loss_meter.avg
 
 
-def load_model(model, model_path, optimizer=None, resume=False, 
-               lr=None, lr_step=None):
-  start_epoch = 0
-  # checkpoint = torch.load(model_path, map_location=lambda storage, loc: storage)
-
-  checkpoint = torch.load(model_path, map_location = torch.device('cpu'))
-  # print('loaded {}, epoch {}'.format(model_path, checkpoint['epoch']))
-  state_dict_ = checkpoint['state_dict']
-  state_dict = {}
-  
-  # convert data_parallal to model
-  for k in state_dict_:
-    if k.startswith('module') and not k.startswith('module_list'):
-      state_dict[k[7:]] = state_dict_[k]
-    else:
-      state_dict[k] = state_dict_[k]
-  model_state_dict = model.state_dict()
-
-  # check loaded parameters and created model parameters
-  msg = 'If you see this, your model does not fully load the ' + \
-        'pre-trained weight. Please make sure ' + \
-        'you have correctly specified --arch xxx ' + \
-        'or set the correct --num_classes for your own dataset.'
-  for k in state_dict:
-    if k in model_state_dict:
-      if state_dict[k].shape != model_state_dict[k].shape:
-        print('Skip loading parameter {}, required shape{}, '\
-              'loaded shape{}. {}'.format(
-          k, model_state_dict[k].shape, state_dict[k].shape, msg))
-        state_dict[k] = model_state_dict[k]
-    else:
-      print('Drop parameter {}.'.format(k) + msg)
-  for k in model_state_dict:
-    if not (k in state_dict):
-      print('No param {}.'.format(k) + msg)
-      state_dict[k] = model_state_dict[k]
-  model.load_state_dict(state_dict, strict=False)
-  return model
-
-
 def main(opt):
     torch.manual_seed(opt.seed)
     torch.backends.cudnn.benchmark = True
-    train_path = "../VOC/train.txt"
-    val_path = "../VOC/val.txt"
-    # optimizer = torch.optim.Adam(model.parameters(), opt.lr)
+    train_path = "./VOC/train.txt"
+    val_path = "./VOC/val.txt"
+
     start_epoch = 0
-    # print('Setting up data...')
+  
     imageshape=(384,384)
     val_loader = torch.utils.data.DataLoader(
             listDataset(val_path, shape=imageshape,shuffle = False, 
@@ -232,7 +191,6 @@ def main(opt):
     from models import get_pose_net
     heads = {"hm":20,"wh":2,"reg":2}
     model = get_pose_net(18,heads, head_conv=64)
-#    model = load_model(model,"model_state.pth")
     model.cuda()
 
     criterion = CtdetLoss(opt)

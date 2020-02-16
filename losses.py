@@ -283,15 +283,7 @@ class CtdetLoss(torch.nn.Module):
       output = outputs[s]
       if not opt.mse_loss:
         output['hm'] = _sigmoid(output['hm'])
-
-      if opt.eval_oracle_hm:
-        output['hm'] = batch['hm']
-
-      if opt.eval_oracle_wh:
-        output['wh'] = torch.from_numpy(gen_oracle_map(
-          batch['wh'].detach().cpu().numpy(), 
-          batch['ind'].detach().cpu().numpy(), 
-          output['wh'].shape[3], output['wh'].shape[2])).to(opt.device)
+ 
       if opt.eval_oracle_offset:
         output['reg'] = torch.from_numpy(gen_oracle_map(
           batch['reg'].detach().cpu().numpy(), 
@@ -300,24 +292,7 @@ class CtdetLoss(torch.nn.Module):
       
       hm_loss += self.crit(output['hm'], batch['hm']) / opt.num_stacks
       if opt.wh_weight > 0:
-        if opt.dense_wh:
-          mask_weight = batch['dense_wh_mask'].sum() + 1e-4
-          wh_loss += (
-            self.crit_wh(output['wh'] * batch['dense_wh_mask'],
-            batch['dense_wh'] * batch['dense_wh_mask']) / 
-            mask_weight) / opt.num_stacks
-        elif opt.cat_spec_wh:
-          wh_loss += self.crit_wh(
-            output['wh'], batch['cat_spec_mask'],
-            batch['ind'], batch['cat_spec_wh']) / opt.num_stacks
-        else:
-            # print(output['wh'])
-            # print("+++++++++")
-            # print(batch['reg_mask'])
-            # print(batch['ind'])
-            # print("+++++++++")
-            # print(batch['wh'])
-            wh_loss += self.crit_reg(
+        wh_loss += self.crit_reg(
               output['wh'], batch['reg_mask'],
               batch['ind'], batch['wh']) / opt.num_stacks
       
@@ -332,9 +307,8 @@ class CtdetLoss(torch.nn.Module):
     return loss, loss_stats
 
 
-    def labeltoneed(batch):
-        x = batch[0]
-
+    # def labeltoneed(batch):
+    #     x = batch[0]
 
 
 if __name__ == '__main__':
@@ -343,5 +317,6 @@ if __name__ == '__main__':
   mask = torch.randn(1,50, 2)
   # print(target)
   print(F.l1_loss(input*mask, target*mask, size_average=False))
+  criterion = CtdetLoss(opt)
 
       
