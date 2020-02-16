@@ -2,7 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import os
-from dataload import listDataset
+# from dataload import listDataset
 import torch
 import torch.utils.data
 from opts import opts
@@ -85,7 +85,7 @@ def process(images, model,return_time=False):
 def post_process(dets,meta,num_classes,max_per_image,scale=1):
     dets = dets.detach().cpu().numpy()
     dets = dets.reshape(1, -1, dets.shape[2])
-    dets = resize_post_process(dets.copy(),meta,num_classes,max_per_image)
+    dets = ctdet_post_process(dets.copy(),meta,num_classes,max_per_image)
     for j in range(1, num_classes + 1):
       dets[0][j] = np.array(dets[0][j], dtype=np.float32).reshape(-1, 5)
       dets[0][j][:, :4] /= scale
@@ -219,7 +219,7 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     from models import get_pose_net
     heads = {"hm":num_classes,"wh":2,"reg":2}
-    model = get_pose_net(50,heads, head_conv=64)
+    model = get_pose_net(18,heads, head_conv=64)
     # model = load_model(model,"./models/model_origin.pth")
     model = load_model(model,"./model_origin.pth")
     model.cuda()
@@ -242,14 +242,14 @@ if __name__ == '__main__':
     # print(detections)
     # cv2.imshow("test",image_result)
     # cv2.waitKey(0)
-    imagePath = "F:/deeplearning/pytorch-YOLO-v1-master/VOCtrainval_06-Nov-2007/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages"
-    
-    files = os.listdir(imagePath)
-    for file in files:
-        filename = os.path.join(imagePath,file)
+    # imagePath = ""
+    with open("./VOC/test.txt") as f:
+        lines = f.readlines()
+    for line in lines:
+        filename = line.rstrip()
         image = cv2.imread(filename,1)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image_result,detections = detect(image,model,num_classes,max_per_image)
+        image_result,detections = detect_eval(image,model,num_classes,max_per_image)
         print(detections)
         if image_result is None:
             continue

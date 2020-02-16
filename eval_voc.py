@@ -15,7 +15,7 @@ model = get_pose_net(18,heads, head_conv=64)
 # model = load_model(model,"./models/model_origin.pth")
 # model = load_model(model,"ctdet_pascal_resdcn18_384.pth")
 #model = load_model(model,"./model_origin.pth")
-model = load_model(model,"./last.pth")
+model = load_model(model,"./model_origin.pth")
 #model = load_model(model,"./resnet50dcn.pth")
 # model = load_model(model,"./resnet50last.pth")
 # model.cuda()
@@ -186,7 +186,7 @@ if __name__ == '__main__':
     model = model.cuda()
     count = 0
     for image_path in tqdm(image_list):
-        root_path = "/mnt/VOC/VOCdevkit/VOC2007/JPEGImages"
+        root_path = r"D:\Code\centernet-pasvoc\VOC\VOCdevkit\VOC2007\JPEGImages"
         image_path_test = os.path.join(root_path,image_path)
         image = cv2.imread(image_path_test)
         # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
